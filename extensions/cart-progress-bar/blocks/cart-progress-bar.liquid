@@ -1,0 +1,170 @@
+{% assign spending_goals = app.metafields.app-2.spending_goals | json | parse_json %}
+
+<style>
+.shipping-remaining-container {
+  padding: 12px;
+  background: white;
+  margin: 10px 0;
+  border: 1px solid #e7e5e5;
+}
+
+.shipping-message {
+  text-align: center;
+  margin-bottom: 8px;
+  font-size: 14px;
+}
+
+.shipping-progress-bar {
+  height: 8px;
+  background: #eee;
+  margin: 8px 0;
+  overflow: hidden;
+}
+
+.progress-fill {
+  height: 100%;
+  background: #000;
+  transition: width 0.3s ease;
+}
+
+.status-text {
+  display: flex;
+  justify-content: space-between;
+  font-size: 12px;
+  color: #666;
+}
+</style>
+
+{% for goal in spending_goals %}
+  {% assign threshold_amount = goal.spendingGoal | times: 100 %}
+  {% assign cart_total = cart.total_price %}
+  {% assign remaining_amount = threshold_amount | minus: cart_total %}
+  {% assign placeholder = '{{amount_left}}' %}
+
+  <div class="shipping-remaining-container" 
+       data-threshold="{{ threshold_amount }}"
+       data-cart-total="{{ cart_total }}"
+       data-index="{{ forloop.index0 }}">
+    <div class="shipping-bar-wrapper">
+      <div class="shipping-message">
+        {% if cart_total >= threshold_amount %}
+          {% case goal.selectedTab %}
+            {% when 0 %}
+              <span>{{ goal.freeShipping }}</span>
+            {% when 1 %}
+              <span>{{ goal.percent | default: goal.percentageDiscount | append: '% off' }}</span>
+            {% when 2 %}
+              <span>{{ goal.fixedAmount | default: '$' | append: goal.fixedAmountDiscount | append: ' off' }}</span>
+          {% endcase %}
+        {% else %}
+          <span>{{ goal.announcement | replace: placeholder, remaining_amount | money }}</span>
+        {% endif %}
+      </div>
+
+      <div class="shipping-progress-bar">
+        {% assign progress_percentage = cart_total | times: 100 | divided_by: threshold_amount | at_most: 100 %}
+        <div class="progress-fill" style="width: {{ progress_percentage }}%">.</div>
+      </div>
+
+      <div class="status-text">
+        <span>$0</span>
+        <span>${{ threshold_amount | divided_by: 100 }}</span>
+      </div>
+    </div>
+  </div>
+{% endfor %}
+
+<script>
+function updateShippingProgress() {
+  const containers = document.querySelectorAll('.shipping-remaining-container');
+  const goals = {{ spending_goals | json }};
+  
+  containers.forEach(container => {
+    const threshold = parseInt(container.getAttribute('data-threshold'));
+    const cartTotal = parseInt(container.getAttribute('data-cart-total'));
+    const index = parseInt(container.getAttribute('data-index'));
+    const goal = goals[index];
+    
+    const progress = Math.min(100, (cartTotal / threshold) * 100);
+    const remaining = Math.max(0, threshold - cartTotal);
+    
+    const progressBar = container.querySelector('.progress-fill');
+    progressBar.style.width = `${progress}%`;
+    
+    const message = container.querySelector('.shipping-message span');
+    if (cartTotal >= threshold) {
+      switch(goal.selectedTab) {
+        case 0:
+          message.textContent = goal.freeShipping;
+          break;
+        case 1:
+          message.textContent = goal.percent || `${goal.percentageDiscount}% off`;
+          break;
+        case 2:
+          message.textContent = goal.fixedAmount || `$${goal.fixedAmountDiscount} off`;
+          break;
+      }
+    } else {
+      const formattedAmount = Shopify.formatMoney(remaining);
+      message.textContent = goal.announcement.replace('{{amount_left}}', formattedAmount);
+    }
+  });
+}
+
+updateShippingProgress();
+
+document.addEventListener('cart:updated', function(event) {
+  const containers = document.querySelectorAll('.shipping-remaining-container');
+  containers.forEach(container => {
+    container.setAttribute('data-cart-total', event.detail.cart.total_price);
+  });
+  
+  updateShippingProgress();
+});
+</script>
+
+
+{% schema %}
+  {
+    "name": "cart-progress-bar",
+    "target": "section",
+    "settings": [
+      {
+        "type": "range",
+        "id": "border_radius",
+        "label": "Border Radius",
+        "min": 0,
+        "max": 20,
+        "step": 1,
+        "default": 4,
+        "unit": "px"
+      },
+      {
+        "type": "range",
+        "id": "border_width",
+        "label": "Border Width",
+        "min": 0,
+        "max": 5,
+        "step": 1,
+        "default": 1,
+        "unit": "px"
+      },
+      {
+        "type": "range",
+        "id": "progress_height",
+        "label": "Progress Bar Height",
+        "min": 2,
+        "max": 20,
+        "step": 1,
+        "default": 8,
+        "unit": "px"
+      },
+      {
+        "type": "color",
+        "id": "progress_color",
+        "label": "Progress Bar Color",
+        "default": "#000000"
+      }
+    ]
+  }
+  {% endschema %}

@@ -1,324 +1,163 @@
-// import { useState, useCallback } from "react";
-// import {
-//   LegacyCard,
-//   Tabs,
-//   TextField,
-//   Text,
-//   Button,
-// } from "@shopify/polaris";
+import { useState, useRef, useCallback } from 'react';
+import { Card, TextField, Button, Select, BlockStack } from "@shopify/polaris";
 
-// export function SpendingGoal({ id, onDelete, onSave }) {
-//   const [spendingGoal, setSpendingGoal] = useState("50");
-//   const [selectedTab, setSelectedTab] = useState(0);
-//   const [freeShipping, setFreeShipping] = useState("Free Shipping 🚚");
-//   const [percentageDiscount, setPercentageDiscount] = useState("5");
-//   const [fixedAmountDiscount, setFixedAmountDiscount] = useState("5");
-//   const [announcement, setAnnouncement] = useState(
-//     "Add {{amount_left}} to get free shipping! 🚚"
-//   );
+// Constants for reusable values
+const DISCOUNT_TYPES = {
+  FREE_SHIPPING: 0,
+  PERCENTAGE: 1,
+  FIXED_AMOUNT: 2
+};
 
-//   const tabs = [
-//     { id: "free-shipping", content: "Free Shipping", panelID: "free-shipping-panel" },
-//     { id: "percent", content: "Percent", panelID: "percent-panel" },
-//     { id: "fixed-amount", content: "Fixed Amount", panelID: "fixed-amount-panel" },
-//   ];
+const DISCOUNT_OPTIONS = [
+  { label: "Free Shipping", value: DISCOUNT_TYPES.FREE_SHIPPING.toString() },
+  { label: "Percentage Discount", value: DISCOUNT_TYPES.PERCENTAGE.toString() },
+  { label: "Fixed Amount", value: DISCOUNT_TYPES.FIXED_AMOUNT.toString() }
+];
 
-//   const handleTabChange = useCallback((selectedTabIndex) => {
-//     setSelectedTab(selectedTabIndex);
-//   }, []);
+const MESSAGES = {
+  FREE_SHIPPING: "more to get free shipping",
+  DISCOUNT: "more to get discount"
+};
 
-//   const percentDisplay = `${percentageDiscount}% off`;
-//   const fixedAmountDisplay = `$${fixedAmountDiscount} off`;
+export function SpendingGoal({
+  id,
+  shop,
+  spendingGoal,
+  announcement,
+  selectedTab,
+  freeShipping: initialFreeShipping,
+  percentageDiscount: initialPercentageDiscount,
+  fixedAmountDiscount: initialFixedAmountDiscount,
+  onDelete,
+  onUpdate,
+}) {
+  // Unified state management for all form fields
+  const [state, setState] = useState({
+    spendingGoal,
+    announcement,
+    selectedTab,
+    freeShipping: initialFreeShipping,
+    percentageDiscount: initialPercentageDiscount || 0,
+    fixedAmountDiscount: initialFixedAmountDiscount || 0,
+    freeShippingUsed: initialFreeShipping // Track if free shipping was ever used
+  });
 
-//   const handleNumericInput = (value) => {
-//     return value >= 0 ? value : "0"; // Prevent negative inputs
-//   };
+  // Cache previous state to prevent unnecessary updates
+  const previousValues = useRef(state);
 
-//   const handleSave = async () => {
-//     const updatedGoal = {
-//       id, // Ensure this is the correct id from the form data
-//       spendingGoal,
-//       announcement,
-//       selectedTab,
-//       freeShipping: selectedTab === 0 ? freeShipping : null,
-//       percentageDiscount: selectedTab === 1 ? percentageDiscount : null,
-//       fixedAmountDiscount: selectedTab === 2 ? fixedAmountDiscount : null,
-//     };
+  // Generic update handler for all state changes
+  const handleUpdate = useCallback((updates) => {
+    const newState = { ...state, ...updates };
+    
+    // Only update if values actually changed
+    if (JSON.stringify(newState) !== JSON.stringify(previousValues.current)) {
+      previousValues.current = newState;
+      setState(newState);
+      onUpdate(newState);
+    }
+  }, [state, onUpdate]);
 
-//     const method = id ? "PUT" : "POST"; // Use PUT if editing existing, POST if creating new
-//     const response = await fetch(`/api/cart`, {
-//       method,
-//       headers: { "Content-Type": "application/json" },
-//       body: JSON.stringify({ updatedGoal }),
-//     });
+  // Handle discount type changes
+  const [errorMessage, setErrorMessage] = useState('');
 
-//     const data = await response.json();
-//     if (response.ok) {
-//       alert(data.message);
-//       onSave(data);
-//     } else {
-//       alert("Failed to save changes: " + data.message);
-//     }
-//   };
+  const handleTabChange = useCallback((value) => {
+    const newTab = parseInt(value);
+    const updates = {
+      selectedTab: newTab,
+      announcement: newTab === DISCOUNT_TYPES.FREE_SHIPPING 
+        ? MESSAGES.FREE_SHIPPING 
+        : MESSAGES.DISCOUNT,
+      freeShipping: newTab === DISCOUNT_TYPES.FREE_SHIPPING // Set freeShipping based on selectedTab
+    };
 
-//   return (
-//     <>
-//       <div
-//         style={{
-//           display: "flex",
-//           justifyContent: "space-between",
-//           alignItems: "center",
-//           marginTop: "0.5rem",
-//         }}
-//       >
-//         <Text variant="headingMd">Spending Goal {id}</Text>
-//         <Button
-//           variant="plain"
-//           tone="critical"
-//           onClick={() => onDelete(id)}
-//         >
-//           Delete Discount
-//         </Button>
-//       </div>
-//       <TextField
-//         label={`Target Amount ${id}`}
-//         type="number"
-//         value={spendingGoal}
-//         onChange={(value) => setSpendingGoal(handleNumericInput(value))}
-//         suffix="px"
-//         autoComplete="off"
-//       />
-//       <Text variant="bodyMd" as="p">
-//         Spending goal in your store's primary currency
-//       </Text>
-//       <div style={{ marginTop: "1rem" }}></div>
-//       <LegacyCard>
-//         <Tabs
-//           tabs={tabs}
-//           selected={selectedTab}
-//           onSelect={handleTabChange}
-//           fitted
-//         >
-//           <LegacyCard.Section title={tabs[selectedTab].content}>
-//             {selectedTab === 0 && (
-//               <>
-//                 <TextField
-//                   label="Reward Text"
-//                   type="text"
-//                   value={freeShipping}
-//                   onChange={setFreeShipping}
-//                   autoComplete="off"
-//                 />
-//                 <TextField
-//                   label="Text before the goal is reached"
-//                   type="text"
-//                   value={announcement}
-//                   onChange={setAnnouncement}
-//                   autoComplete="off"
-//                 />
-//               </>
-//             )}
-//             {selectedTab === 1 && (
-//               <>
-//                 <TextField
-//                   label="Set Percentage for Discount"
-//                   type="number"
-//                   value={percentageDiscount}
-//                   onChange={(value) =>
-//                     setPercentageDiscount(handleNumericInput(value))
-//                   }
-//                   suffix="%"
-//                   autoComplete="off"
-//                 />
-//               </>
-//             )}
-//             {selectedTab === 2 && (
-//               <>
-//                 <TextField
-//                   label="Set Fixed Discount"
-//                   type="number"
-//                   value={fixedAmountDiscount}
-//                   onChange={(value) =>
-//                     setFixedAmountDiscount(handleNumericInput(value))
-//                   }
-//                   suffix="px"
-//                   autoComplete="off"
-//                 />
-//               </>
-//             )}
-//           </LegacyCard.Section>
-//         </Tabs>
-//       </LegacyCard>
-//       <Button onClick={handleSave}>Save Changes</Button>
-//     </>
-//   );
-// }
-
-
-import { useState, useEffect, useCallback } from "react";
-import { LegacyCard, Tabs, TextField, Text, Button } from "@shopify/polaris";
-import { useFetcher } from "@remix-run/react"; // To handle fetch requests for save and delete actions
-
-export function SpendingGoal({ id, onDelete }) {
-  const [spendingGoal, setSpendingGoal] = useState("50");
-  const [selectedTab, setSelectedTab] = useState(0);
-  const [freeShipping, setFreeShipping] = useState("Free Shipping 🚚");
-  const [percentageDiscount, setPercentageDiscount] = useState("5");
-  const [fixedAmountDiscount, setFixedAmountDiscount] = useState("5");
-  const [announcement, setAnnouncement] = useState("Add {{amount_left}} to get free shipping! 🚚");
-
-  const fetcher = useFetcher(); // Use fetcher to send POST requests for save
-
-  // Tabs for different discount types
-  const tabs = [
-    { id: "free-shipping", content: "Free Shipping", panelID: "free-shipping-panel" },
-    { id: "percent", content: "Percent", panelID: "percent-panel" },
-    { id: "fixed-amount", content: "Fixed Amount", panelID: "fixed-amount-panel" },
-  ];
-
-  // Handle tab changes
-  const handleTabChange = useCallback((selectedTabIndex) => {
-    setSelectedTab(selectedTabIndex);
-  }, []);
-
-  // Display values for percentage and fixed amount discount
-  const percentDisplay = `${percentageDiscount}% off`;
-  const fixedAmountDisplay = `$${fixedAmountDiscount} off`;
-
-  // Handle numeric input to prevent negative values
-  const handleNumericInput = (value) => {
-    return value >= 0 ? value : "0";
-  };
-
-  // Load existing data when the component is mounted
-  useEffect(() => {
-    // This should ideally come from the server, but for simplicity, it's mocked
-    const loadData = async () => {
-      // Replace with API call to load data from the database
-      const response = await fetch(`/api/spendingGoal/${id}`);
-      const data = await response.json();
-      if (data.status === "success") {
-        setSpendingGoal(data.spendingGoal.spendingGoal);
-        setFreeShipping(data.spendingGoal.freeShipping);
-        setPercentageDiscount(data.spendingGoal.percentageDiscount);
-        setFixedAmountDiscount(data.spendingGoal.fixedAmountDiscount);
-        setAnnouncement(data.spendingGoal.announcement);
-        setSelectedTab(data.spendingGoal.selectedTab);
+    // Handle free shipping logic
+    if (newTab === DISCOUNT_TYPES.FREE_SHIPPING) {
+      if (state.freeShippingUsed) {
+        setErrorMessage("Free shipping has already been used and cannot be selected again.");
+        return; // Prevent re-selecting free shipping if already used
       }
-    };
+      updates.freeShippingUsed = true; // Mark free shipping as used
+      setErrorMessage(''); // Clear error message
+    } else {
+      updates.freeShippingUsed = false; // Reset freeShippingUsed for other discount types
+      setErrorMessage(''); // Clear error message
+    }
 
-    loadData();
-  }, [id]);
+    handleUpdate(updates);
+  }, [state.freeShippingUsed, handleUpdate]);
 
-  const handleSave = () => {
-    const updatedGoal = {
-      id,
-      spendingGoal: spendingGoal,
-      announcement: announcement,
-      selectedTab: selectedTab,
-      freeShipping: selectedTab === 0 ? freeShipping : null,
-      percentageDiscount: selectedTab === 1 ? percentageDiscount : null,
-      fixedAmountDiscount: selectedTab === 2 ? fixedAmountDiscount : null,
-    };
-
-    // Send the updated data to the backend using fetcher
-    fetcher.submit({ updatedGoal }, { method: "POST" });
-  };
-
-  const handleDelete = () => {
-    // Call the delete function passed in as a prop
-    onDelete(id);
-  };
+  // Render appropriate discount input field based on selected type
+  const renderDiscountField = useCallback(() => {
+    switch (state.selectedTab) {
+      case DISCOUNT_TYPES.PERCENTAGE:
+        return (
+          <TextField
+            label="Percentage Discount"
+            type="number"
+            value={state.percentageDiscount.toString()}
+            onChange={(value) => handleUpdate({ percentageDiscount: parseFloat(value) || 0 })}
+            autoComplete="off"
+            suffix="%"
+          />
+        );
+      case DISCOUNT_TYPES.FIXED_AMOUNT:
+        return (
+          <TextField
+            label="Fixed Amount Discount"
+            type="number"
+            value={state.fixedAmountDiscount.toString()}
+            onChange={(value) => handleUpdate({ fixedAmountDiscount: parseFloat(value) || 0 })}
+            autoComplete="off"
+            prefix="$"
+          />
+        );
+      default:
+        return null;
+    }
+  }, [state.selectedTab, state.percentageDiscount, state.fixedAmountDiscount, handleUpdate]);
 
   return (
-    <>
-      <div
-        style={{
-          display: "flex",
-          justifyContent: "space-between",
-          alignItems: "center",
-          marginTop: "0.5rem",
-        }}
-      >
-        <Text variant="headingMd">Spending Goal {id}</Text>
-        <Button variant="plain" tone="critical" onClick={handleDelete}>
-          Delete Discount
+    <Card>
+      <BlockStack gap="400">
+        {/* Discount Type Selector */}
+        <Select
+          label="Discount Type"
+          options={DISCOUNT_OPTIONS.map(option => ({
+            ...option,
+            disabled: parseInt(option.value) === DISCOUNT_TYPES.FREE_SHIPPING && 
+                     state.freeShippingUsed
+          }))}
+          onChange={handleTabChange}
+          value={state.selectedTab.toString()}
+        />
+        {errorMessage && <div style={{ color: 'red' }}>{errorMessage}</div>} {/* Error message */}
+
+        {/* Spending Goal Input */}
+        <TextField
+          label="Spending Goal"
+          type="number"
+          value={state.spendingGoal.toString()}
+          onChange={(value) => handleUpdate({ spendingGoal: parseFloat(value) || 0 })}
+          autoComplete="off"
+        />
+
+        {/* Announcement Message Input */}
+        <TextField
+          label="Announcement Message"
+          value={state.announcement}
+          onChange={(value) => handleUpdate({ announcement: value })}
+          autoComplete="off"
+          multiline
+        />
+
+        {/* Dynamic Discount Input Field */}
+        {renderDiscountField()}
+
+        {/* Delete Button */}
+        <Button destructive onClick={() => onDelete(id)}>
+          Delete
         </Button>
-      </div>
-
-      <TextField
-        label={`Target Amount ${id}`}
-        type="number"
-        value={spendingGoal}
-        onChange={(value) => setSpendingGoal(handleNumericInput(value))}
-        suffix="px"
-        autoComplete="off"
-      />
-      <Text variant="bodyMd" as="p">
-        Spending goal in your store's primary currency
-      </Text>
-
-      <div style={{ marginTop: "1rem" }}></div>
-
-      <LegacyCard>
-        <Tabs
-          tabs={tabs}
-          selected={selectedTab}
-          onSelect={handleTabChange}
-          fitted
-        >
-          <LegacyCard.Section title={tabs[selectedTab].content}>
-            {selectedTab === 0 && (
-              <>
-                <TextField
-                  label="Reward Text"
-                  type="text"
-                  value={freeShipping}
-                  onChange={setFreeShipping}
-                  autoComplete="off"
-                />
-                <TextField
-                  label="Text before the goal is reached"
-                  type="text"
-                  value={announcement}
-                  onChange={setAnnouncement}
-                  autoComplete="off"
-                />
-              </>
-            )}
-            {selectedTab === 1 && (
-              <>
-                <TextField
-                  label="Set Percentage for Discount"
-                  type="number"
-                  value={percentageDiscount}
-                  onChange={(value) =>
-                    setPercentageDiscount(handleNumericInput(value))
-                  }
-                  suffix="%"
-                  autoComplete="off"
-                />
-              </>
-            )}
-            {selectedTab === 2 && (
-              <>
-                <TextField
-                  label="Set Fixed Discount"
-                  type="number"
-                  value={fixedAmountDiscount}
-                  onChange={(value) =>
-                    setFixedAmountDiscount(handleNumericInput(value))
-                  }
-                  suffix="px"
-                  autoComplete="off"
-                />
-              </>
-            )}
-          </LegacyCard.Section>
-        </Tabs>
-      </LegacyCard>
-
-      <Button onClick={handleSave}>Save Changes</Button>
-    </>
+      </BlockStack>
+    </Card>
   );
 }

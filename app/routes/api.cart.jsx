@@ -2,62 +2,63 @@ import { json } from "@remix-run/node";
 import db from "../db.server";
 
 export async function loader({ request }) {
-  const url = new URL(request.url);
-  const shop = url.searchParams.get("shop");
-
-  if (!shop) {
-    return json({ success: false, error: "Shop parameter is required" }, { status: 400 });
+  try {
+    console.log("Fetching goals from Prisma...");
+    const goals = await db.spendingGoal.findMany();
+    console.log("Retrieved goals from Prisma:", goals);
+    
+    // Return the data in the expected format
+    return json({
+      success: true,
+      data: goals
+    });
+  } catch (error) {
+    console.error('Error fetching spending goals:', error);
+    return json({
+      success: false,
+      error: 'Failed to fetch spending goals'
+    }, { status: 500 });
   }
-
-  const goals = await db.spendingGoal.findMany({
-    where: { shop }
-  });
-
-  return json({ success: true, data: goals });
 }
 
 export async function action({ request }) {
   const formData = await request.formData();
-  const shop = formData.get("shop");
   const action = formData.get("_action");
-
-  if (!shop) {
-    return json({ success: false, error: "Shop parameter is required" }, { status: 400 });
-  }
 
   try {
     switch (action) {
       case "CREATE":
         const newGoal = await db.spendingGoal.create({
           data: {
-            shop,
-            spendingGoal: Number(formData.get("spendingGoal")),
-            selectedTab: Number(formData.get("selectedTab")),
-            freeShipping: formData.get("freeShipping"),
-            percentageDiscount: Number(formData.get("percentageDiscount")),
-            fixedAmountDiscount: Number(formData.get("fixedAmountDiscount")),
-            announcement: formData.get("announcement")
+            shop: formData.get("shop") || "",
+            spendingGoal: parseFloat(formData.get("spendingGoal") || "0"),
+            announcement: formData.get("announcement") || "",
+            selectedTab: parseInt(formData.get("selectedTab") || "0"),
+            freeShipping: formData.get("freeShipping") || null,
+            percentageDiscount: formData.get("percentageDiscount") ? parseFloat(formData.get("percentageDiscount")) : null,
+            fixedAmountDiscount: formData.get("fixedAmountDiscount") ? parseFloat(formData.get("fixedAmountDiscount")) : null
           }
         });
         return json({ success: true, data: newGoal });
 
       case "UPDATE":
-        const goalId = formData.get("goalId");
+        const goalId = parseInt(formData.get("goalId"));
         const updatedGoal = await db.spendingGoal.update({
           where: { id: goalId },
           data: {
-            spendingGoal: Number(formData.get("spendingGoal")),
-            selectedTab: Number(formData.get("selectedTab")),
-            freeShipping: formData.get("freeShipping"),
-            percentageDiscount: Number(formData.get("percentageDiscount")),
-            fixedAmountDiscount: Number(formData.get("fixedAmountDiscount")),
-            announcement: formData.get("announcement")
+            shop: formData.get("shop"),
+            spendingGoal: parseFloat(formData.get("spendingGoal")),
+            announcement: formData.get("announcement"),
+            selectedTab: parseInt(formData.get("selectedTab")),
+            freeShipping: formData.get("freeShipping") || null,
+            percentageDiscount: formData.get("percentageDiscount") ? parseFloat(formData.get("percentageDiscount")) : null,
+            fixedAmountDiscount: formData.get("fixedAmountDiscount") ? parseFloat(formData.get("fixedAmountDiscount")) : null
           }
         });
         return json({ success: true, data: updatedGoal });
 
       case "DELETE":
-        const deleteId = formData.get("goalId");
+        const deleteId = parseInt(formData.get("goalId"));
         await db.spendingGoal.delete({
           where: { id: deleteId }
         });

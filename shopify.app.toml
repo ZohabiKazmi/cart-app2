@@ -1,7 +1,7 @@
 # Learn more about configuring your app at https://shopify.dev/docs/apps/tools/cli/configuration
 
 client_id = "3f130a89219b009840b1604715f5294e"
-application_url = "https://enhance-momentum-tar-survivors.trycloudflare.com"
+application_url = "https://waterproof-conviction-tunisia-lancaster.trycloudflare.com"
 embedded = true
 name = "app"
 handle = "app-1521"
@@ -19,9 +19,9 @@ scopes = "write_products"
 
 [auth]
 redirect_urls = [
-  "https://enhance-momentum-tar-survivors.trycloudflare.com/auth/callback",
-  "https://enhance-momentum-tar-survivors.trycloudflare.com/auth/shopify/callback",
-  "https://enhance-momentum-tar-survivors.trycloudflare.com/api/auth/callback"
+  "https://waterproof-conviction-tunisia-lancaster.trycloudflare.com/auth/callback",
+  "https://waterproof-conviction-tunisia-lancaster.trycloudflare.com/auth/shopify/callback",
+  "https://waterproof-conviction-tunisia-lancaster.trycloudflare.com/api/auth/callback"
 ]
 
 [pos]

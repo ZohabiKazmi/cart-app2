@@ -58,7 +58,7 @@ export default function Index() {
         body: JSON.stringify(settings),
       });
 
-      const data = await response.json(); // Parse response
+      const data = await response.json(); // Parse response 
       if (response.ok) {
         console.log("Save successful:", data); // Debugging log
         setToastMessage("Settings saved successfully");

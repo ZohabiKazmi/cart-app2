@@ -1,5 +1,3 @@
-// components/Index.jsx
-
 import { useState, useEffect, useCallback } from "react";
 import { useFetcher } from "@remix-run/react";
 import { Frame, Page, Layout, Button, Toast, BlockStack } from "@shopify/polaris";

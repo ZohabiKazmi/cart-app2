@@ -58,11 +58,13 @@
         if (this.cartTotal >= threshold) {
           switch(goal.selectedTab) {
             case 0:
-              return goal.freeShipping;
+              return goal.freeShipping || 'Free Shipping';
             case 1:
-              return `${goal.percentageDiscount}% off`;
+              return goal.percentageDiscount ? `${goal.percentageDiscount}% off` : '';
             case 2:
-              return `$${goal.fixedAmountDiscount} off`;
+              return goal.fixedAmountDiscount ? `$${goal.fixedAmountDiscount} off` : '';
+            default:
+              return '';
           }
         } else {
           const remaining = threshold - this.cartTotal;

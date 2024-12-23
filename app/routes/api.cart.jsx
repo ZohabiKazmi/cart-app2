@@ -9,27 +9,11 @@ export async function loader({ request }) {
     return json({ success: false, error: "Shop parameter is required" }, { status: 400 });
   }
 
-  try {
-    const spendingGoals = await db.spendingGoal.findMany({
-      where: {
-        shop: shop
-      },
-      orderBy: {
-        spendingGoal: 'asc'
-      }
-    });
+  const goals = await db.spendingGoal.findMany({
+    where: { shop }
+  });
 
-    return json({
-      success: true,
-      data: spendingGoals
-    });
-  } catch (error) {
-    console.error('Error fetching spending goals:', error);
-    return json({
-      success: false,
-      error: 'Failed to fetch spending goals'
-    }, { status: 500 });
-  }
+  return json({ success: true, data: goals });
 }
 
 export async function action({ request }) {

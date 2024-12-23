@@ -34,6 +34,7 @@ model Session {
 
 model SpendingGoal {
   id                Int      @id @default(autoincrement())
+  shop             String
   spendingGoal      Float
   announcement      String
   selectedTab       Int

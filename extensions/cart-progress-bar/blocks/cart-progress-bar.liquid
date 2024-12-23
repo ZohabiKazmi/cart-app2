@@ -1,77 +1,66 @@
 <style>
-  .shipping-remaining-container {
-    padding: 12px;
-    background: white;
-    margin: 10px 0;
-    border: 1px solid #e7e5e5;
-  }
-
-  .shipping-message {
-    text-align: center;
-    margin-bottom: 8px;
-    font-size: 14px;
-  }
-
-  .shipping-progress-bar {
-    height: 8px;
-    background: #eee;
-    margin: 8px 0;
-    overflow: hidden;
-  }
-
-  .progress-fill {
-    height: 100%;
-    background: #000;
-    transition: width 0.3s ease;
-  }
-
-  .status-text {
-    display: flex;
-    justify-content: space-between;
-    font-size: 12px;
-    color: #666;
-  }
+  <div class="shipping-remaining-container">
+  <style>
+    .shipping-remaining-container {
+      padding: 12px;
+      background: white;
+      margin: 10px 0;
+      border: 1px solid #e7e5e5;
+      border-radius: 8px;
+    }
+    .shipping-message {
+      text-align: center;
+      margin-bottom: 8px;
+      font-size: 14px;
+    }
+    .shipping-progress-bar {
+      height: 8px;
+      background: #eee;
+      border-radius: 4px;
+      margin: 8px 0;
+      overflow: hidden;
+    }
+    .progress-fill {
+      height: 100%;
+      background: #000;
+      transition: width 0.3s ease;
+    }
+    .benefits-container {
+      display: flex;
+      justify-content: space-between;
+      font-size: 12px;
+      color: #666;
+    }
   </style>
 
-<div x-data="cartProgress">
-  <template x-if="spendingGoals.length > 0">
-    <template x-for="(goal, index) in spendingGoals" :key="index">
-      <div class="shipping-remaining-container" 
-           :data-threshold="goal.spendingGoal * 100"
-           :data-cart-total="cartTotal"
-           :data-index="index">
-        <div class="shipping-bar-wrapper">
-          <div class="shipping-message">
-            <span x-text="getProgressMessage(goal, index)"></span>
-          </div>
+  <div x-data="cartProgress">
+    <div class="shipping-message" x-show="spendingGoals.length > 0">
+      <span x-text="getCurrentMessage()"></span>
+    </div>
 
-          <div class="shipping-progress-bar">
-            <div class="progress-fill" 
-                 :style="'width: ' + calculateProgress(goal.spendingGoal) + '%'">.</div>
-          </div>
-
-          <div class="status-text">
-            <span>$0</span>
-            <span x-text="'$' + goal.spendingGoal"></span>
-          </div>
-        </div>
+    <div class="shipping-progress-bar" x-show="spendingGoals.length > 0">
+      <div class="progress-fill" 
+           :style="'width: ' + calculateTotalProgress() + '%'">
       </div>
-    </template>
-  </template>
+    </div>
+
+    <div class="benefits-container" x-show="spendingGoals.length > 0">
+      <template x-for="goal in spendingGoals" :key="goal.spendingGoal">
+        <span x-text="getBenefitText(goal)"></span>
+      </template>
+    </div>
+  </div>
 
   <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
-
   <script>
     document.addEventListener('alpine:init', () => {
       Alpine.data('cartProgress', () => ({
         spendingGoals: [],
         cartTotal: {{ cart.total_price }},
-        appUrl: "https://boards-alpine-promotes-spyware.trycloudflare.com",
+        appUrl: "https://pressure-under-vacancies-beauty.trycloudflare.com",
 
         init() {
           this.fetchSpendingGoals();
-          
-          // Listen for cart updates
           document.addEventListener('cart:updated', (event) => {
             this.cartTotal = event.detail.cart.total_price;
           });
@@ -81,48 +70,40 @@
           try {
             const shop = "{{ shop.permanent_domain }}";
             const response = await fetch(`${this.appUrl}/api/cart?shop=${shop}`);
-            const result = await response.json();
-            
-            if (result.success) {
-              this.spendingGoals = result.data;
-              console.log('Fetched goals:', this.spendingGoals);
-            } else {
-              console.error('Failed to fetch goals:', result.error);
+            const data = await response.json();
+            if (data.success) {
+              this.spendingGoals = data.data.sort((a, b) => a.spendingGoal - b.spendingGoal);
             }
           } catch (error) {
             console.error('Error fetching goals:', error);
           }
         },
 
-        calculateProgress(threshold) {
-          const cartValue = this.cartTotal / 100; // Convert cents to dollars
-          if (cartValue >= threshold) return 100;
-          return Math.min(100, (cartValue / threshold) * 100);
+        calculateTotalProgress() {
+          const cartValue = this.cartTotal / 100;
+          const maxGoal = Math.max(...this.spendingGoals.map(g => g.spendingGoal));
+          return Math.min(100, (cartValue / maxGoal) * 100);
         },
 
-        getProgressMessage(goal, index) {
-          const threshold = goal.spendingGoal;
-          const cartValue = this.cartTotal / 100; // Convert cents to dollars
+        getCurrentMessage() {
+          const cartValue = this.cartTotal / 100;
+          const nextGoal = this.spendingGoals.find(g => g.spendingGoal > cartValue);
           
-          if (cartValue >= threshold) {
-            switch(goal.selectedTab) {
-              case 0:
-                return goal.freeShipping || 'Free Shipping';
-              case 1:
-                return goal.percentageDiscount ? `${goal.percentageDiscount}% off` : '';
-              case 2:
-                return goal.fixedAmountDiscount ? `$${goal.fixedAmountDiscount} off` : '';
-              default:
-                return '';
-            }
-          } else {
-            const remaining = threshold - cartValue;
-            return goal.announcement.replace('{{amount_left}}', `$${remaining.toFixed(2)}`);
-          }
+          if (!nextGoal) return `You've unlocked all benefits!`;
+          return nextGoal.announcement.replace('{{amount_left}}', 
+            `$${(nextGoal.spendingGoal - cartValue).toFixed(2)}`);
+        },
+
+        getBenefitText(goal) {
+          if (goal.selectedTab === 0) return 'Free shipping';
+          if (goal.selectedTab === 1) return `${goal.percentageDiscount}% off`;
+          if (goal.selectedTab === 2) return `$${goal.fixedAmountDiscount} off`;
+          return '';
         }
       }));
     });
   </script>
+</div>
 
 
   {% schema %}

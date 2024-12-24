@@ -33,85 +33,99 @@
     }
   </style>
 
-  <div x-data="cartProgress">
-    <div class="shipping-message" x-show="spendingGoals.length > 0">
-      <span x-text="getCurrentMessage()"></span>
-    </div>
+<div class="shipping-remaining-container" x-data="cartProgress">
+  <div class="shipping-message" x-show="spendingGoals.length > 0">
+    <span x-text="getCurrentMessage()"></span>
+  </div>
 
-    <div class="shipping-progress-bar" x-show="spendingGoals.length > 0">
-      <div class="progress-fill" 
-           :style="'width: ' + calculateTotalProgress() + '%'" 
-           x-bind:style="'width: ' + calculateTotalProgress() + '%'" 
-           x-text="calculateTotalProgress() + '%'">
-      </div>
-    </div>
-
-    <div class="benefits-container" x-show="spendingGoals.length > 0">
-      <template x-for="goal in spendingGoals" :key="goal.spendingGoal">
-        <span x-text="getBenefitText(goal)"></span>
-      </template>
+  <div class="shipping-progress-bar" x-show="spendingGoals.length > 0">
+    <div class="progress-fill" 
+         x-bind:style="'width: ' + calculateTotalProgress() + '%'">
     </div>
   </div>
 
-  <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
-  <script>
-    document.addEventListener('alpine:init', () => {
-      Alpine.data('cartProgress', () => ({
-        spendingGoals: [],
-        cartTotal: {{ cart.total_price }},
-        appUrl: "https://pressure-under-vacancies-beauty.trycloudflare.com",
+  <div class="benefits-container" x-show="spendingGoals.length > 0">
+    <template x-for="goal in spendingGoals" :key="goal.spendingGoal">
+      <span x-text="getBenefitText(goal)"></span>
+    </template>
+  </div>
+</div>
 
-        init() {
-          this.fetchSpendingGoals();
-          document.addEventListener('cart:updated', (event) => {
-            this.cartTotal = event.detail.cart.total_price;
-            this.updateProgress();
-          });
-        },
+<script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+<script>
+  document.addEventListener('alpine:init', () => {
+  Alpine.data('cartProgress', () => ({
+    spendingGoals: [],
+    cartTotal: 0, // Initialize as 0
+    appUrl: "https://annex-zimbabwe-infrastructure-feeding.trycloudflare.com",
 
-        updateProgress() {
-          this.calculateTotalProgress();
-          this.getCurrentMessage();
-        },
+    init() {
+      this.fetchSpendingGoals();
+      this.fetchCartTotal(); // Fetch initial cart total
 
-        async fetchSpendingGoals() {
-          try {
-            const shop = "{{ shop.permanent_domain }}";
-            const response = await fetch(`${this.appUrl}/api/cart?shop=${shop}`);
-            const data = await response.json();
-            if (data.success) {
-              this.spendingGoals = data.data.sort((a, b) => a.spendingGoal - b.spendingGoal);
-            }
-          } catch (error) {
-            console.error('Error fetching goals:', error);
-          }
-          this.updateProgress();
-        },
+      // Listen for cart updates
+      document.addEventListener('cart:updated', () => {
+        this.fetchCartTotal(); // Fetch updated cart total
+        this.refreshValues(); // Recalculate progress and message
+      });
+    },
 
-        calculateTotalProgress() {
-          const cartValue = this.cartTotal / 100;
-          const maxGoal = Math.max(...this.spendingGoals.map(g => g.spendingGoal));
-          return Math.min(100, (cartValue / maxGoal) * 100);
-        },
+    async fetchCartTotal() {
+      try {
+        const response = await fetch('/cart.js'); // Shopify's cart API
+        const data = await response.json();
+        this.cartTotal = data.total_price; // Update cartTotal dynamically
+      } catch (error) {
+        console.error('Error fetching cart total:', error);
+      }
+    },
 
-        getCurrentMessage() {
-          const cartValue = this.cartTotal / 100;
-          const nextGoal = this.spendingGoals.find(g => g.spendingGoal > cartValue);
-          
-          if (!nextGoal) return `You've unlocked all benefits!`;
-          return nextGoal.announcement.replace('{{amount_left}}', 
-            `$${(nextGoal.spendingGoal - cartValue).toFixed(2)}`);
-        },
-
-        getBenefitText(goal) {
-          if (goal.selectedTab === 0) return 'Free shipping';
-          if (goal.selectedTab === 1) return `${goal.percentageDiscount}% off`;
-          if (goal.selectedTab === 2) return `$${goal.fixedAmountDiscount} off`;
-          return '';
+    async fetchSpendingGoals() {
+      try {
+        const shop = "{{ shop.permanent_domain }}";
+        const response = await fetch(`${this.appUrl}/api/cart?shop=${shop}`);
+        const data = await response.json();
+        if (data.success) {
+          this.spendingGoals = data.data.sort((a, b) => a.spendingGoal - b.spendingGoal);
         }
-      }));
-    });
-  </script>
+      } catch (error) {
+        console.error('Error fetching goals:', error);
+      }
+      this.refreshValues();
+    },
+
+    refreshValues() {
+      this.calculateTotalProgress(); // Recalculate progress bar
+      this.getCurrentMessage(); // Refresh the announcement message
+    },
+
+    calculateTotalProgress() {
+      const cartValue = this.cartTotal / 100;
+      const maxGoal = Math.max(...this.spendingGoals.map(g => g.spendingGoal));
+      return Math.min(100, (cartValue / maxGoal) * 100); // Return progress as a percentage
+    },
+
+    getCurrentMessage() {
+      const cartValue = this.cartTotal / 100;
+      const nextGoal = this.spendingGoals.find(g => g.spendingGoal > cartValue);
+
+      if (!nextGoal) return `You've unlocked all benefits!`;
+      return nextGoal.announcement.replace(/\{\{amount_left\}\}/g, 
+        `$${(nextGoal.spendingGoal - cartValue).toFixed(2)}`);
+    },
+
+    getBenefitText(goal) {
+      if (goal.selectedTab === 1) return `${goal.percentageDiscount}% off`;
+      if (goal.selectedTab === 2) return `$${goal.fixedAmountDiscount} off`;
+      if (goal.selectedTab === 0) return 'Free shipping';
+      return '';
+    }
+  }));
+});
+
+  
+</script>
+
 </div>
 
 

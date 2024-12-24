@@ -9,9 +9,9 @@ const DISCOUNT_TYPES = {
 };
 
 const DISCOUNT_OPTIONS = [
-  { label: "Free Shipping", value: DISCOUNT_TYPES.FREE_SHIPPING.toString() },
   { label: "Percentage Discount", value: DISCOUNT_TYPES.PERCENTAGE.toString() },
-  { label: "Fixed Amount", value: DISCOUNT_TYPES.FIXED_AMOUNT.toString() }
+  { label: "Fixed Amount", value: DISCOUNT_TYPES.FIXED_AMOUNT.toString() },
+  { label: "Free Shipping", value: DISCOUNT_TYPES.FREE_SHIPPING.toString() }
 ];
 
 const MESSAGES = {
@@ -30,12 +30,13 @@ export function SpendingGoal({
   fixedAmountDiscount: initialFixedAmountDiscount,
   onDelete,
   onUpdate,
+  isFreeShippingUsed,
 }) {
   // Unified state management for all form fields
   const [state, setState] = useState({
     spendingGoal,
     announcement,
-    selectedTab,
+    selectedTab: DISCOUNT_TYPES.PERCENTAGE,
     freeShipping: initialFreeShipping,
     percentageDiscount: initialPercentageDiscount || 0,
     fixedAmountDiscount: initialFixedAmountDiscount || 0,
@@ -65,17 +66,18 @@ export function SpendingGoal({
     const updates = {
       selectedTab: newTab,
       announcement: newTab === DISCOUNT_TYPES.FREE_SHIPPING 
-        ? MESSAGES.FREE_SHIPPING 
-        : MESSAGES.DISCOUNT,
+        ? `Add {{amount_left}} more to get free shipping` 
+        : `Add {{amount_left}} more to get discount`,
       freeShipping: newTab === DISCOUNT_TYPES.FREE_SHIPPING // Set freeShipping based on selectedTab
     };
 
     // Handle free shipping logic
+    if (newTab === DISCOUNT_TYPES.FREE_SHIPPING && isFreeShippingUsed) {
+      setErrorMessage("Free shipping has already been used in another discount goal.");
+      return; // Prevent selecting free shipping if already used elsewhere
+    }
+
     if (newTab === DISCOUNT_TYPES.FREE_SHIPPING) {
-      if (state.freeShippingUsed) {
-        setErrorMessage("Free shipping has already been used and cannot be selected again.");
-        return; // Prevent re-selecting free shipping if already used
-      }
       updates.freeShippingUsed = true; // Mark free shipping as used
       setErrorMessage(''); // Clear error message
     } else {
@@ -84,7 +86,7 @@ export function SpendingGoal({
     }
 
     handleUpdate(updates);
-  }, [state.freeShippingUsed, handleUpdate]);
+  }, [isFreeShippingUsed, handleUpdate]);
 
   // Render appropriate discount input field based on selected type
   const renderDiscountField = useCallback(() => {
@@ -125,7 +127,7 @@ export function SpendingGoal({
           options={DISCOUNT_OPTIONS.map(option => ({
             ...option,
             disabled: parseInt(option.value) === DISCOUNT_TYPES.FREE_SHIPPING && 
-                     state.freeShippingUsed
+                     (state.freeShippingUsed || isFreeShippingUsed)
           }))}
           onChange={handleTabChange}
           value={state.selectedTab.toString()}
@@ -148,6 +150,7 @@ export function SpendingGoal({
           onChange={(value) => handleUpdate({ announcement: value })}
           autoComplete="off"
           multiline
+          helpText="{{amount_text}} will be replaced with the amount left"
         />
 
         {/* Dynamic Discount Input Field */}

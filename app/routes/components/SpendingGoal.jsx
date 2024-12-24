@@ -150,7 +150,7 @@ export function SpendingGoal({
           onChange={(value) => handleUpdate({ announcement: value })}
           autoComplete="off"
           multiline
-          helpText="{{amount_text}} will be replaced with the amount left"
+          helpText="{{amount_left}} will be replaced with the amount left"
         />
 
         {/* Dynamic Discount Input Field */}

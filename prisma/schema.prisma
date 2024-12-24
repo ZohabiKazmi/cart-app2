@@ -33,12 +33,16 @@ model Session {
 
 
 model SpendingGoal {
-  id                Int      @id @default(autoincrement())
-  shop             String
-  spendingGoal      Float
-  announcement      String
-  selectedTab       Int
-  freeShipping      String?
+  id                 Int      @id @default(autoincrement())
+  shop               String
+  spendingGoal       Float
+  announcement       String?
+  selectedTab        Int
+  freeShipping       Boolean?
   percentageDiscount Float?
   fixedAmountDiscount Float?
+  shopifyDiscountId  String? 
 }
+
+
+   

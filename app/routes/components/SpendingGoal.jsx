@@ -164,3 +164,42 @@ export function SpendingGoal({
     </Card>
   );
 }
+
+
+// <script>
+// const calculateFinalCartTotal = (cartTotal, deliveryCharges) => {
+//     let finalTotal = cartTotal;
+
+//     // Check if free shipping goal is reached
+//     if (state.selectedTab === DISCOUNT_TYPES.FREE_SHIPPING && state.freeShippingUsed) {
+//       finalTotal -= deliveryCharges; // Exclude delivery charges
+//     }
+
+//     // Apply percentage discount
+//     if (state.selectedTab === DISCOUNT_TYPES.PERCENTAGE) {
+//       const discountAmount = (state.percentageDiscount / 100) * cartTotal;
+//       finalTotal -= discountAmount;
+//     }
+
+//     // Apply fixed amount discount
+//     if (state.selectedTab === DISCOUNT_TYPES.FIXED_AMOUNT) {
+//       finalTotal -= state.fixedAmountDiscount;
+//     }
+
+//     return Math.max(finalTotal, 0); // Ensure total doesn't go below zero
+//   };
+
+//   // Example usage in your checkout process
+//   const handleCheckout = async () => {
+//     const cartTotal = await getCartTotal(); // Function to get the current cart total
+//     const deliveryCharges = await getDeliveryCharges(); // Function to get delivery charges
+//     const finalTotal = calculateFinalCartTotal(cartTotal, deliveryCharges);
+
+//     // Create a checkout URL with the final total
+//     const checkoutUrl = `https://${shop}/cart?total=${finalTotal}`;
+//     console.log("Checkout URL:", checkoutUrl);
+
+//     // Redirect to the Shopify checkout page
+//     window.location.href = checkoutUrl;
+//   };
+// </script>

@@ -40,7 +40,9 @@
 
     <div class="shipping-progress-bar" x-show="spendingGoals.length > 0">
       <div class="progress-fill" 
-           :style="'width: ' + calculateTotalProgress() + '%'">
+           :style="'width: ' + calculateTotalProgress() + '%'" 
+           x-bind:style="'width: ' + calculateTotalProgress() + '%'" 
+           x-text="calculateTotalProgress() + '%'">
       </div>
     </div>
 
@@ -63,7 +65,13 @@
           this.fetchSpendingGoals();
           document.addEventListener('cart:updated', (event) => {
             this.cartTotal = event.detail.cart.total_price;
+            this.updateProgress();
           });
+        },
+
+        updateProgress() {
+          this.calculateTotalProgress();
+          this.getCurrentMessage();
         },
 
         async fetchSpendingGoals() {
@@ -77,6 +85,7 @@
           } catch (error) {
             console.error('Error fetching goals:', error);
           }
+          this.updateProgress();
         },
 
         calculateTotalProgress() {

@@ -132,7 +132,7 @@ export default function Index() {
 
       const results = await Promise.all(updatePromises);
       
-      // Check if all updates were successful
+      // Check if all updates were successful 
       if (results.every(result => result.success)) {
         setToastMessage("All changes saved successfully");
         setToastError(false);

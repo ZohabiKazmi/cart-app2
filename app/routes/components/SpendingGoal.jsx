@@ -1,17 +1,17 @@
-import { useState, useRef, useCallback } from 'react';
+import { useState, useRef, useCallback } from "react";
 import { Card, TextField, Button, Select, BlockStack } from "@shopify/polaris";
 
 // Constants for reusable values
 const DISCOUNT_TYPES = {
   FREE_SHIPPING: 0,
   PERCENTAGE: 1,
-  FIXED_AMOUNT: 2
+  FIXED_AMOUNT: 2,
 };
 
 const DISCOUNT_OPTIONS = [
   { label: "Percentage Discount", value: DISCOUNT_TYPES.PERCENTAGE.toString() },
   { label: "Fixed Amount", value: DISCOUNT_TYPES.FIXED_AMOUNT.toString() },
-  { label: "Free Shipping", value: DISCOUNT_TYPES.FREE_SHIPPING.toString() }
+  { label: "Free Shipping", value: DISCOUNT_TYPES.FREE_SHIPPING.toString() },
 ];
 
 // const MESSAGES = {
@@ -22,6 +22,7 @@ const DISCOUNT_OPTIONS = [
 export function SpendingGoal({
   id,
   shop,
+  title,
   spendingGoal,
   announcement,
   selectedTab,
@@ -33,10 +34,11 @@ export function SpendingGoal({
 }) {
   // Unified state management for all form fields
   const [state, setState] = useState({
+    title: title || " ",
     spendingGoal,
     announcement,
     selectedTab: selectedTab || DISCOUNT_TYPES.FREE_SHIPPING,
-    freeShipping: initialFreeShipping,
+    freeShipping: initialFreeShipping || false,
     percentageDiscount: initialPercentageDiscount || 0,
     fixedAmountDiscount: initialFixedAmountDiscount || 0,
   });
@@ -45,46 +47,55 @@ export function SpendingGoal({
   const previousValues = useRef(state);
 
   // Generic update handler for all state changes
-  const handleUpdate = useCallback((updates) => {
-    const newState = { ...state, ...updates };
-    
-    // Only update if values actually changed
-    if (JSON.stringify(newState) !== JSON.stringify(previousValues.current)) {
-      previousValues.current = newState;
-      setState(newState);
-      onUpdate(newState);
-    }
-  }, [state, onUpdate]);
+  const handleUpdate = useCallback(
+    (updates) => {
+      const newState = { ...state, ...updates };
+
+      // Only update if values actually changed
+      if (JSON.stringify(newState) !== JSON.stringify(previousValues.current)) {
+        previousValues.current = newState;
+        setState(newState);
+        onUpdate(newState);
+      }
+    },
+    [state, onUpdate],
+  );
 
   // Handle discount type changes
-  const [errorMessage, setErrorMessage] = useState('');
+  const [errorMessage, setErrorMessage] = useState("");
 
-  const handleTabChange = useCallback((value) => {
-    const newTab = parseInt(value);
-    const updates = {
-      selectedTab: newTab,
-      announcement: newTab === DISCOUNT_TYPES.FREE_SHIPPING 
-        ? `Add {{amount_left}} more to get free shipping` 
-        : `Add {{amount_left}} more to get discount`,
-      freeShipping: newTab === DISCOUNT_TYPES.FREE_SHIPPING // Set freeShipping based on selectedTab
-    };
+  const handleTabChange = useCallback(
+    (value) => {
+      const newTab = parseInt(value);
+      const updates = {
+        selectedTab: newTab,
+        announcement:
+          newTab === DISCOUNT_TYPES.FREE_SHIPPING
+            ? `Add {{amount_left}} more to get free shipping`
+            : `Add {{amount_left}} more to get discount`,
+        freeShipping: newTab === DISCOUNT_TYPES.FREE_SHIPPING, // Set freeShipping based on selectedTab
+      };
 
-    handleUpdate(updates);
-  }, [handleUpdate]);
+      handleUpdate(updates);
+    },
+    [handleUpdate],
+  );
 
   // Render appropriate discount input field based on selected type
   const renderDiscountField = useCallback(() => {
     switch (state.selectedTab) {
       case DISCOUNT_TYPES.PERCENTAGE:
         return (
-          <TextField
-            label="Percentage Discount"
-            type="number"
-            value={state.percentageDiscount.toString()}
-            onChange={(value) => handleUpdate({ percentageDiscount: parseFloat(value) || 0 })}
-            autoComplete="off"
-            suffix="%"
-          />
+            <TextField
+              label="Percentage Discount"
+              type="number"
+              value={state.percentageDiscount.toString()}
+              onChange={(value) =>
+                handleUpdate({ percentageDiscount: parseFloat(value) || 0 })
+              }
+              autoComplete="off"
+              suffix="%"
+            />
         );
       case DISCOUNT_TYPES.FIXED_AMOUNT:
         return (
@@ -92,7 +103,9 @@ export function SpendingGoal({
             label="Fixed Amount Discount"
             type="number"
             value={state.fixedAmountDiscount.toString()}
-            onChange={(value) => handleUpdate({ fixedAmountDiscount: parseFloat(value) || 0 })}
+            onChange={(value) =>
+              handleUpdate({ fixedAmountDiscount: parseFloat(value) || 0 })
+            }
             autoComplete="off"
             prefix="$"
           />
@@ -100,11 +113,23 @@ export function SpendingGoal({
       default:
         return null;
     }
-  }, [state.selectedTab, state.percentageDiscount, state.fixedAmountDiscount, handleUpdate]);
+  }, [
+    state.selectedTab,
+    state.percentageDiscount,
+    state.fixedAmountDiscount,
+    handleUpdate,
+  ]);
 
   return (
     <Card>
       <BlockStack gap="400">
+        <TextField
+          label="Title of Discount"
+          type="text"
+          value={state.title}
+          onChange={(value) => handleUpdate({ title: value || "Discount Title" })}
+          autoComplete="off"
+        />
         {/* Discount Type Selector */}
         <Select
           label="Discount Type"
@@ -112,17 +137,18 @@ export function SpendingGoal({
           onChange={handleTabChange}
           value={state.selectedTab.toString()}
         />
-        {errorMessage && <div style={{ color: 'red' }}>{errorMessage}</div>} {/* Error message */}
-
+        {errorMessage && <div style={{ color: "red" }}>{errorMessage}</div>}{" "}
+        {/* Error message */}
         {/* Spending Goal Input */}
         <TextField
           label="Spending Goal"
           type="number"
           value={state.spendingGoal.toString()}
-          onChange={(value) => handleUpdate({ spendingGoal: parseFloat(value) || 0 })}
+          onChange={(value) =>
+            handleUpdate({ spendingGoal: parseFloat(value) || 0 })
+          }
           autoComplete="off"
         />
-
         {/* Announcement Message Input */}
         <TextField
           label="Announcement Message"
@@ -132,10 +158,8 @@ export function SpendingGoal({
           multiline
           helpText="{{amount_left}} will be replaced with the amount left"
         />
-
         {/* Dynamic Discount Input Field */}
         {renderDiscountField()}
-
         {/* Delete Button */}
         <Button destructive onClick={() => onDelete(id)}>
           Delete

@@ -39,7 +39,8 @@ export default function Index() {
   const handleAddSpendingGoal = async () => {
     const formData = new FormData();
     formData.append("_action", "CREATE");
-    formData.append("shop", "zohaibalishah.myshopify.com"); 
+    formData.append("shop", "zohaibalishah.myshopify.com");
+    formData.append("title", "Discount Title");
     formData.append("spendingGoal", "50");
     formData.append("announcement", "Add {{amount_left}} to get discounts");
     formData.append("selectedTab", "0");
@@ -118,6 +119,7 @@ export default function Index() {
       formData.append("goals[]", JSON.stringify({
         id: goal.id,
         shop: goal.shop,
+        title: goal.title,
         spendingGoal: goal.spendingGoal,
         announcement: goal.announcement,
         selectedTab: goal.selectedTab,

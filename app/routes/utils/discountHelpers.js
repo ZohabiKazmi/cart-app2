@@ -1,59 +1,27 @@
-import { authenticate } from "../../shopify.server";
-
-export async function createAutomaticDiscount(session, { title, spendingGoal, discountType, discountValue }) {
-  const client = await authenticate.admin(session);
-
-  const discountConfig = {
-    automaticBasic: {
-      title,
-      customerSelection: {
-        all: true
-      },
-      minimumRequirement: {
-        subtotal: {
-          greaterThanOrEqualToAmount: spendingGoal.toString()
-        }
-      },
-      startsAt: new Date().toISOString(),
-      customerGets: discountType === 0 ? {
-        shipping: {
-          discount: {
-            onShipping: true
-          }
-        }
-      } : {
-        value: {
-          [discountType === 1 ? 'percentage' : 'fixedAmount']: 
-            discountType === 1 ? discountValue : discountValue.toString()
-        }
-      }
-    }
-  };
-
-  const response = await client.query({
-    data: {
-      query: `mutation discountAutomaticBasicCreate($automaticBasicDiscount: DiscountAutomaticBasicInput!) {
-        discountAutomaticBasicCreate(automaticBasicDiscount: $automaticBasicDiscount) {
-          automaticDiscountNode {
-            id
-          }
-          userErrors {
-            field
-            message
-          }
-        }
-      }`,
-      variables: {
-        automaticBasicDiscount: discountConfig.automaticBasic
-      }
-    }
-  });
-
-  const result = response.body.data.discountAutomaticBasicCreate;
-  
-  if (result.userErrors?.length) {
-    throw new Error(result.userErrors[0].message);
+// Helper functions for discount-related operations
+export function getDiscountTitle(data) {
+    return `Spend ${data.spendingGoal} to get ${
+      data.selectedTab === 0 ? "free shipping" :
+      data.selectedTab === 1 ? `${data.percentageDiscount}% off` :
+      `$${data.fixedAmountDiscount} off`
+    }`;
   }
-
-  return result;
-}
+  
+  export function getDiscountValue(data) {
+    return data.selectedTab === 1 ? data.percentageDiscount :
+           data.selectedTab === 2 ? data.fixedAmountDiscount : null;
+  }
+  
+  export function validateDiscountData(data) {
+    if (!data.spendingGoal || data.spendingGoal <= 0) {
+      throw new Error("Invalid spending goal");
+    }
+  
+    if (data.selectedTab === 1 && (!data.percentageDiscount || data.percentageDiscount <= 0)) {
+      throw new Error("Invalid percentage discount");
+    }
+  
+    if (data.selectedTab === 2 && (!data.fixedAmountDiscount || data.fixedAmountDiscount <= 0)) {
+      throw new Error("Invalid fixed amount discount");
+    }
+  }

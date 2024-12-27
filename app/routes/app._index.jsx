@@ -3,6 +3,8 @@ import { useFetcher } from "@remix-run/react";
 import { Frame, Page, Layout, Button, Toast, BlockStack } from "@shopify/polaris";
 import { TitleBar } from "@shopify/app-bridge-react";
 import { SpendingGoal } from "./components/SpendingGoal"; 
+// import { validateDiscountData } from "./utils/discountHelpers";
+// import { deleteAutomaticDiscount } from "./utils/discounts.server";
 
 export default function Index() {
   const fetcher = useFetcher();
@@ -13,15 +15,12 @@ export default function Index() {
   const [toastMessage, setToastMessage] = useState("");
   const [toastError, setToastError] = useState(false);
 
-  // Updated to fetch from Prisma database
   useEffect(() => {
     async function fetchGoals() {
       try {
         const response = await fetch("/api/cart");
-        
         if (response.ok) {
           const result = await response.json();
-          
           if (result.success && Array.isArray(result.data)) {
             setSpendingGoals(result.data);
           } else {
@@ -37,13 +36,12 @@ export default function Index() {
     fetchGoals();
   }, []);
 
-  // Updated to handle Prisma creation
   const handleAddSpendingGoal = async () => {
     const formData = new FormData();
     formData.append("_action", "CREATE");
     formData.append("shop", "zohaibalishah.myshopify.com"); 
-    formData.append("spendingGoal", "0");
-    formData.append("announcement", "");
+    formData.append("spendingGoal", "50");
+    formData.append("announcement", "Add {{amount_left}} to get discounts");
     formData.append("selectedTab", "0");
 
     try {
@@ -54,19 +52,21 @@ export default function Index() {
 
       if (response.ok) {
         const { data } = await response.json();
-        setSpendingGoals([...spendingGoals, data]);
+        setSpendingGoals(prevGoals => [...prevGoals, data]);
         setToastMessage("Goal created successfully");
         setToastError(false);
         setToastActive(true);
+      } else {
+        const errorData = await response.json();
+        throw new Error(errorData.error || "Failed to create goal");
       }
-    } catch {
-      setToastMessage("Failed to create goal");
+    } catch (error) {
+      setToastMessage(error.message || "Failed to create goal");
       setToastError(true);
       setToastActive(true);
     }
   };
 
-  // Updated to handle Prisma deletion
   const handleDeleteSpendingGoal = async (id) => {
     const formData = new FormData();
     formData.append("_action", "DELETE");
@@ -79,19 +79,21 @@ export default function Index() {
       });
 
       if (response.ok) {
-        setSpendingGoals(spendingGoals.filter(goal => goal.id !== id));
+        setSpendingGoals(prevGoals => prevGoals.filter(goal => goal.id !== id));
         setToastMessage("Goal deleted successfully");
         setToastError(false);
         setToastActive(true);
+      } else {
+        const errorData = await response.json();
+        throw new Error(errorData.error || "Failed to delete goal");
       }
-    } catch {
-      setToastMessage("Failed to delete goal");
+    } catch (error) {
+      setToastMessage(error.message || "Failed to delete goal");
       setToastError(true);
       setToastActive(true);
     }
   };
 
-  // Add function to update individual goal state
   const handleGoalUpdate = (goalId, updates) => {
     setSpendingGoals(prevGoals =>
       prevGoals.map(goal =>
@@ -100,53 +102,48 @@ export default function Index() {
     );
   };
 
-  // Updated to handle Prisma updates
-  const handleSave = useCallback(async () => {
-    setIsLoading(true);
+  const handleSaveChanges = async () => {
+    const formData = new FormData();
+    formData.append("_action", "SAVE");
+    
+    if (!Array.isArray(spendingGoals)) {
+      console.error("spendingGoals is not an array:", spendingGoals);
+      setToastMessage("Failed to save changes: spendingGoals is not an array.");
+      setToastError(true);
+      setToastActive(true);
+      return;
+    }
+
+    spendingGoals.forEach(goal => {
+      formData.append("goals[]", JSON.stringify(goal)); 
+    });
+
     try {
-      // Create an array of promises for each goal update
-      const updatePromises = spendingGoals.map(async (goal) => {
-        const formData = new FormData();
-        formData.append("_action", "UPDATE");
-        formData.append("goalId", goal.id);
-        formData.append("shop", goal.shop);
-        formData.append("spendingGoal", goal.spendingGoal.toString());
-        formData.append("announcement", goal.announcement);
-        formData.append("selectedTab", goal.selectedTab.toString());
-        formData.append("freeShipping", goal.freeShipping ? "true" : "false");
-        formData.append("percentageDiscount", (goal.percentageDiscount || 0).toString());
-        formData.append("fixedAmountDiscount", (goal.fixedAmountDiscount || 0).toString());
-
-        const response = await fetch("/api/cart", {
-          method: "POST",
-          body: formData,
-        });
-
-        if (!response.ok) {
-          const errorData = await response.json();
-          throw new Error(errorData.message || `Failed to update goal ${goal.id}`);
-        }
-
-        return response.json();
+      const response = await fetch("/api/cart", {
+        method: "POST",
+        body: formData
       });
 
-      const results = await Promise.all(updatePromises);
-      
-      // Check if all updates were successful 
-      if (results.every(result => result.success)) {
-        setToastMessage("All changes saved successfully");
-        setToastError(false);
+      if (response.ok) {
+        const result = await response.json();
+        if (result.success) {
+          setToastMessage("Changes saved successfully.");
+          setToastError(false);
+        } else {
+          throw new Error(result.error || "Failed to save changes.");
+        }
       } else {
-        throw new Error("Some updates failed");
+        const errorData = await response.json();
+        throw new Error(errorData.error || "Failed to save changes.");
       }
     } catch (error) {
-      setToastMessage(error.message || "Failed to save changes");
+      console.error("Save changes error:", error);
+      setToastMessage(error.message || "Failed to save changes.");
       setToastError(true);
     } finally {
-      setIsLoading(false);
       setToastActive(true);
     }
-  }, [spendingGoals]);
+  };
 
   const toastMarkup = toastActive ? (
     <Toast
@@ -162,7 +159,7 @@ export default function Index() {
         title="Cart App"
         primaryAction={{
           content: isLoading ? "Saving..." : "Save Changes",
-          onAction: handleSave,
+          onAction: handleSaveChanges,
           loading: isLoading,
           primary: true,
           disabled: isLoading

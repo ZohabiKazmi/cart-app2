@@ -37,7 +37,7 @@ export async function action({ request }) {
             spendingGoal: parseFloat(formData.get("spendingGoal") || "0"),
             announcement: formData.get("announcement") || "",
             selectedTab: parseInt(formData.get("selectedTab") || "0"),
-            freeShipping: formData.get("freeShipping") || null,
+            freeShipping: formData.get("freeShipping") === 'true',
             percentageDiscount: formData.get("percentageDiscount")
               ? parseFloat(formData.get("percentageDiscount"))
               : null,
@@ -57,7 +57,7 @@ export async function action({ request }) {
             spendingGoal: parseFloat(formData.get("spendingGoal")),
             announcement: formData.get("announcement"),
             selectedTab: parseInt(formData.get("selectedTab")),
-            freeShipping: formData.get("freeShipping") || null,
+            freeShipping: formData.get("freeShipping") === 'true',
             percentageDiscount: formData.get("percentageDiscount")
               ? parseFloat(formData.get("percentageDiscount"))
               : null,

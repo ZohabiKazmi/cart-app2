@@ -35,7 +35,7 @@ export function SpendingGoal({
   const [state, setState] = useState({
     spendingGoal,
     announcement,
-    selectedTab: DISCOUNT_TYPES.PERCENTAGE,
+    selectedTab: selectedTab || DISCOUNT_TYPES.FREE_SHIPPING,
     freeShipping: initialFreeShipping,
     percentageDiscount: initialPercentageDiscount || 0,
     fixedAmountDiscount: initialFixedAmountDiscount || 0,

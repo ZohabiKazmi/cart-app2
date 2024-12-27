@@ -77,29 +77,16 @@ export async function action({ request }) {
 
       case "SAVE":
         try {
-          const goalsData = formData.get("goals[]");
-          const goals = Array.isArray(JSON.parse(goalsData)) ? JSON.parse(goalsData) : [JSON.parse(goalsData)];
+          const goalsData = formData.getAll("goals[]");
+          const goals = goalsData.map(data => JSON.parse(data));
+
+          // Debugging log to check the parsed goals
+          console.log("Parsed goals data:", goals);
 
           const results = await Promise.all(goals.map(async (goal) => {
             // Ensure goal.id is valid
             if (!goal.id) {
               throw new Error("Goal ID is missing");
-            }
-
-            // Update Shopify discount if it exists
-            if (goal.shopifyDiscountId) {
-              await updateAutomaticDiscount(session, {
-                discountId: goal.shopifyDiscountId,
-                title: `Spend ${goal.spendingGoal} to get ${
-                  goal.selectedTab === 0 ? "free shipping" :
-                  goal.selectedTab === 1 ? `${goal.percentageDiscount}% off` :
-                  `$${goal.fixedAmountDiscount} off`
-                }`,
-                spendingGoal: goal.spendingGoal,
-                discountType: goal.selectedTab,
-                discountValue: goal.selectedTab === 1 ? goal.percentageDiscount :
-                              goal.selectedTab === 2 ? goal.fixedAmountDiscount : null
-              });
             }
 
             // Update the goal in the database
@@ -116,7 +103,8 @@ export async function action({ request }) {
             });
           }));
 
-          return json({ success: true });
+          // Return the results of all updates
+          return json({ success: true, data: results });
         } catch (error) {
           console.error("Error saving goals:", error);
           return json({ success: false, error: 'Failed to save goals: ' + error.message }, { status: 500 });

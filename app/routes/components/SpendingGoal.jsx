@@ -14,10 +14,10 @@ const DISCOUNT_OPTIONS = [
   { label: "Free Shipping", value: DISCOUNT_TYPES.FREE_SHIPPING.toString() }
 ];
 
-const MESSAGES = {
-  FREE_SHIPPING: "more to get free shipping",
-  DISCOUNT: "more to get discount"
-};
+// const MESSAGES = {
+//   FREE_SHIPPING: "more to get free shipping",
+//   DISCOUNT: "more to get discount"
+// };
 
 export function SpendingGoal({
   id,
@@ -30,7 +30,6 @@ export function SpendingGoal({
   fixedAmountDiscount: initialFixedAmountDiscount,
   onDelete,
   onUpdate,
-  isFreeShippingUsed,
 }) {
   // Unified state management for all form fields
   const [state, setState] = useState({
@@ -40,7 +39,6 @@ export function SpendingGoal({
     freeShipping: initialFreeShipping,
     percentageDiscount: initialPercentageDiscount || 0,
     fixedAmountDiscount: initialFixedAmountDiscount || 0,
-    freeShippingUsed: initialFreeShipping // Track if free shipping was ever used
   });
 
   // Cache previous state to prevent unnecessary updates
@@ -71,22 +69,8 @@ export function SpendingGoal({
       freeShipping: newTab === DISCOUNT_TYPES.FREE_SHIPPING // Set freeShipping based on selectedTab
     };
 
-    // Handle free shipping logic
-    if (newTab === DISCOUNT_TYPES.FREE_SHIPPING && isFreeShippingUsed) {
-      setErrorMessage("Free shipping has already been used in another discount goal.");
-      return; // Prevent selecting free shipping if already used elsewhere
-    }
-
-    if (newTab === DISCOUNT_TYPES.FREE_SHIPPING) {
-      updates.freeShippingUsed = true; // Mark free shipping as used
-      setErrorMessage(''); // Clear error message
-    } else {
-      updates.freeShippingUsed = false; // Reset freeShippingUsed for other discount types
-      setErrorMessage(''); // Clear error message
-    }
-
     handleUpdate(updates);
-  }, [isFreeShippingUsed, handleUpdate]);
+  }, [handleUpdate]);
 
   // Render appropriate discount input field based on selected type
   const renderDiscountField = useCallback(() => {
@@ -124,11 +108,7 @@ export function SpendingGoal({
         {/* Discount Type Selector */}
         <Select
           label="Discount Type"
-          options={DISCOUNT_OPTIONS.map(option => ({
-            ...option,
-            disabled: parseInt(option.value) === DISCOUNT_TYPES.FREE_SHIPPING && 
-                     (state.freeShippingUsed || isFreeShippingUsed)
-          }))}
+          options={DISCOUNT_OPTIONS}
           onChange={handleTabChange}
           value={state.selectedTab.toString()}
         />
@@ -164,7 +144,6 @@ export function SpendingGoal({
     </Card>
   );
 }
-
 
 // <script>
 // const calculateFinalCartTotal = (cartTotal, deliveryCharges) => {

@@ -115,7 +115,16 @@ export default function Index() {
     }
 
     spendingGoals.forEach(goal => {
-      formData.append("goals[]", JSON.stringify(goal)); 
+      formData.append("goals[]", JSON.stringify({
+        id: goal.id,
+        shop: goal.shop,
+        spendingGoal: goal.spendingGoal,
+        announcement: goal.announcement,
+        selectedTab: goal.selectedTab,
+        freeShipping: goal.freeShipping,
+        percentageDiscount: goal.percentageDiscount,
+        fixedAmountDiscount: goal.fixedAmountDiscount,
+      }));
     });
 
     try {

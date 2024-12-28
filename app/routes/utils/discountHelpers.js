@@ -5,7 +5,7 @@ export async function createAutomaticDiscount(session, { title, spendingGoal, di
 
   const discountConfig = {
     automaticBasic: {
-      title,
+      title: title,
       customerSelection: {
         all: true
       },

@@ -1,5 +1,128 @@
 import { json } from "@remix-run/node";
 import db from "../db.server";
+import {
+  createAutomaticDiscount,
+  updateAutomaticDiscount,
+  deleteAutomaticDiscount,
+} from "./utils/discounts.server";
+import { authenticate } from "../shopify.server";
+
+async function handleCreate(formData, session) {
+  const newGoalData = {
+    shop: formData.get("shop") || "",
+    spendingGoal: parseFloat(formData.get("spendingGoal") || "0"),
+    announcement: formData.get("announcement") || "",
+    selectedTab: parseInt(formData.get("selectedTab") || "0"),
+    freeShipping: formData.get("freeShipping") === "true",
+    percentageDiscount: formData.get("percentageDiscount")
+      ? parseFloat(formData.get("percentageDiscount"))
+      : null,
+    fixedAmountDiscount: formData.get("fixedAmountDiscount")
+      ? parseFloat(formData.get("fixedAmountDiscount"))
+      : null,
+  };
+
+  // Create Shopify discount
+  const discountResponse = await createAutomaticDiscount(session, {
+    title: `Spend ${newGoalData.spendingGoal} to get ${
+      newGoalData.selectedTab === 0
+        ? "free shipping"
+        : newGoalData.selectedTab === 1
+        ? `${newGoalData.percentageDiscount}% off`
+        : `$${newGoalData.fixedAmountDiscount} off`
+    }`,
+    spendingGoal: newGoalData.spendingGoal,
+    discountType: newGoalData.selectedTab,
+    discountValue:
+      newGoalData.selectedTab === 1
+        ? newGoalData.percentageDiscount
+        : newGoalData.selectedTab === 2
+        ? newGoalData.fixedAmountDiscount
+        : null,
+  });
+
+  if (discountResponse.userErrors?.length) {
+    throw new Error(discountResponse.userErrors[0].message);
+  }
+
+  // Store the Shopify discount ID
+  return db.spendingGoal.create({
+    data: {
+      ...newGoalData,
+      shopifyDiscountId: discountResponse.automaticDiscountNode.id,
+    },
+  });
+}
+
+async function handleUpdate(formData, session) {
+  const goalId = parseInt(formData.get("goalId"));
+  const goal = await db.spendingGoal.findUnique({ where: { id: goalId } });
+
+  if (!goal) {
+    throw new Error("Goal not found");
+  }
+
+  const updatedData = {
+    shop: formData.get("shop"),
+    spendingGoal: parseFloat(formData.get("spendingGoal")),
+    announcement: formData.get("announcement"),
+    selectedTab: parseInt(formData.get("selectedTab")),
+    freeShipping: formData.get("freeShipping") === "true",
+    percentageDiscount: formData.get("percentageDiscount")
+      ? parseFloat(formData.get("percentageDiscount"))
+      : null,
+    fixedAmountDiscount: formData.get("fixedAmountDiscount")
+      ? parseFloat(formData.get("fixedAmountDiscount"))
+      : null,
+  };
+
+  // Update Shopify discount
+  if (goal.shopifyDiscountId) {
+    await updateAutomaticDiscount(session, {
+      discountId: goal.shopifyDiscountId,
+      title: `Spend ${updatedData.spendingGoal} to get ${
+        updatedData.selectedTab === 0
+          ? "free shipping"
+          : updatedData.selectedTab === 1
+          ? `${updatedData.percentageDiscount}% off`
+          : `$${updatedData.fixedAmountDiscount} off`
+      }`,
+      spendingGoal: updatedData.spendingGoal,
+      discountType: updatedData.selectedTab,
+      discountValue:
+        updatedData.selectedTab === 1
+          ? updatedData.percentageDiscount
+          : updatedData.selectedTab === 2
+          ? updatedData.fixedAmountDiscount
+          : null,
+    });
+  }
+
+  return db.spendingGoal.update({
+    where: { id: goalId },
+    data: updatedData,
+  });
+}
+
+async function handleDelete(formData, session) {
+  const goalId = parseInt(formData.get("goalId"));
+  const goalToDelete = await db.spendingGoal.findUnique({ where: { id: goalId } });
+
+  if (!goalToDelete) {
+    throw new Error("Goal not found");
+  }
+
+  // Delete Shopify discount
+  if (goalToDelete.shopifyDiscountId) {
+    await deleteAutomaticDiscount(session, goalToDelete.shopifyDiscountId);
+  }
+
+  await db.spendingGoal.delete({
+    where: { id: goalId },
+  });
+
+  return { success: true };
+}
 
 export async function loader({ request }) {
   try {
@@ -7,7 +130,6 @@ export async function loader({ request }) {
     const goals = await db.spendingGoal.findMany();
     console.log("Retrieved goals from Prisma:", goals);
 
-    // Return the data in the expected format
     return json({
       success: true,
       data: goals,
@@ -19,7 +141,7 @@ export async function loader({ request }) {
         success: false,
         error: "Failed to fetch spending goals",
       },
-      { status: 500 },
+      { status: 500 }
     );
   }
 }
@@ -27,106 +149,172 @@ export async function loader({ request }) {
 export async function action({ request }) {
   const formData = await request.formData();
   const action = formData.get("_action");
+  const session = await authenticate.admin(request);
 
   try {
     switch (action) {
-      case "CREATE":
-        const newGoal = await db.spendingGoal.create({
-          data: {
-            title: formData.get("title") || "Discount Title",
-            shop: formData.get("shop") || "",
-            spendingGoal: parseFloat(formData.get("spendingGoal") || "0"),
-            announcement: formData.get("announcement") || "",
-            selectedTab: parseInt(formData.get("selectedTab") || "0"),
-            freeShipping: formData.get("freeShipping") === 'true',
-            percentageDiscount: formData.get("percentageDiscount")
-              ? parseFloat(formData.get("percentageDiscount"))
-              : null,
-            fixedAmountDiscount: formData.get("fixedAmountDiscount")
-              ? parseFloat(formData.get("fixedAmountDiscount"))
-              : null,
-          },
-        });
+      case "CREATE": {
+        const newGoal = await handleCreate(formData, session);
         return json({ success: true, data: newGoal });
-
-      case "UPDATE":
-        const goalId = parseInt(formData.get("goalId"));
-        const updatedGoal = await db.spendingGoal.update({
-          where: { id: goalId },
-          data: {
-            title: formData.get("title"),
-            shop: formData.get("shop"),
-            spendingGoal: parseFloat(formData.get("spendingGoal")),
-            announcement: formData.get("announcement"),
-            selectedTab: parseInt(formData.get("selectedTab")),
-            freeShipping: formData.get("freeShipping") === 'true',
-            percentageDiscount: formData.get("percentageDiscount")
-              ? parseFloat(formData.get("percentageDiscount"))
-              : null,
-            fixedAmountDiscount: formData.get("fixedAmountDiscount")
-              ? parseFloat(formData.get("fixedAmountDiscount"))
-              : null,
-          },
-        });
+      }
+      case "UPDATE": {
+        const updatedGoal = await handleUpdate(formData, session);
         return json({ success: true, data: updatedGoal });
-
-      case "DELETE":
-        const deleteId = parseInt(formData.get("goalId"));
-        await db.spendingGoal.delete({
-          where: { id: deleteId },
-        });
-        return json({ success: true });
-
-      case "SAVE":
-        try {
-          const goalsData = formData.getAll("goals[]");
-          const goals = goalsData.map(data => JSON.parse(data));
-
-          // Debugging log to check the parsed goals
-          console.log("Parsed goals data:", goals);
-
-          const results = await Promise.all(goals.map(async (goal) => {
-            // Ensure goal.id is valid
-            if (!goal.id) {
-              throw new Error("Goal ID is missing");
-            }
-
-            // Update the goal in the database
-            return db.spendingGoal.update({
-              where: { id: goal.id },
-              data: {
-                title: goal.title,
-                spendingGoal: goal.spendingGoal,
-                announcement: goal.announcement,
-                selectedTab: goal.selectedTab,
-                freeShipping: goal.freeShipping,
-                percentageDiscount: goal.percentageDiscount,
-                fixedAmountDiscount: goal.fixedAmountDiscount,
-              }
-            });
-          }));
-
-          // Return the results of all updates
-          return json({ success: true, data: results });
-        } catch (error) {
-          console.error("Error saving goals:", error);
-          return json({ success: false, error: 'Failed to save goals: ' + error.message }, { status: 500 });
-        }
-
+      }
+      case "DELETE": {
+        const result = await handleDelete(formData, session);
+        return json(result);
+      }
       default:
-        return json({ success: false, error: 'Invalid action' }, { status: 400 });
+        return json({ success: false, error: "Invalid action" }, { status: 400 });
     }
   } catch (error) {
     console.error("Error managing spending goals:", error);
     return json(
       {
         success: false,
-        error: "Failed to process spending goal operation",
+        error: error.message || "Failed to process spending goal operation",
       },
-      { status: 500 },
+      { status: 500 }
     );
   }
 }
+
+
+
+
+
+// 1.0
+
+// import { json } from "@remix-run/node";
+// import db from "../db.server";
+
+// export async function loader({ request }) {
+//   try {
+//     console.log("Fetching goals from Prisma...");
+//     const goals = await db.spendingGoal.findMany();
+//     console.log("Retrieved goals from Prisma:", goals);
+
+//     // Return the data in the expected format
+//     return json({
+//       success: true,
+//       data: goals,
+//     });
+//   } catch (error) {
+//     console.error("Error fetching spending goals:", error);
+//     return json(
+//       {
+//         success: false,
+//         error: "Failed to fetch spending goals",
+//       },
+//       { status: 500 },
+//     );
+//   }
+// }
+
+// export async function action({ request }) {
+//   const formData = await request.formData();
+//   const action = formData.get("_action");
+
+//   try {
+//     switch (action) {
+//       case "CREATE":
+//         const newGoal = await db.spendingGoal.create({
+//           data: {
+//             title: formData.get("title") || "Discount Title",
+//             shop: formData.get("shop") || "",
+//             spendingGoal: parseFloat(formData.get("spendingGoal") || "0"),
+//             announcement: formData.get("announcement") || "",
+//             selectedTab: parseInt(formData.get("selectedTab") || "0"),
+//             freeShipping: formData.get("freeShipping") === 'true',
+//             percentageDiscount: formData.get("percentageDiscount")
+//               ? parseFloat(formData.get("percentageDiscount"))
+//               : null,
+//             fixedAmountDiscount: formData.get("fixedAmountDiscount")
+//               ? parseFloat(formData.get("fixedAmountDiscount"))
+//               : null,
+//           },
+//         });
+//         return json({ success: true, data: newGoal });
+
+//       case "UPDATE":
+//         const goalId = parseInt(formData.get("goalId"));
+//         const updatedGoal = await db.spendingGoal.update({
+//           where: { id: goalId },
+//           data: {
+//             title: formData.get("title"),
+//             shop: formData.get("shop"),
+//             spendingGoal: parseFloat(formData.get("spendingGoal")),
+//             announcement: formData.get("announcement"),
+//             selectedTab: parseInt(formData.get("selectedTab")),
+//             freeShipping: formData.get("freeShipping") === 'true',
+//             percentageDiscount: formData.get("percentageDiscount")
+//               ? parseFloat(formData.get("percentageDiscount"))
+//               : null,
+//             fixedAmountDiscount: formData.get("fixedAmountDiscount")
+//               ? parseFloat(formData.get("fixedAmountDiscount"))
+//               : null,
+//           },
+//         });
+//         return json({ success: true, data: updatedGoal });
+
+//       case "DELETE":
+//         const deleteId = parseInt(formData.get("goalId"));
+//         await db.spendingGoal.delete({
+//           where: { id: deleteId },
+//         });
+//         return json({ success: true });
+
+//       case "SAVE":
+//         try {
+//           const goalsData = formData.getAll("goals[]");
+//           const goals = goalsData.map(data => JSON.parse(data));
+
+//           // Debugging log to check the parsed goals
+//           console.log("Parsed goals data:", goals);
+
+//           const results = await Promise.all(goals.map(async (goal) => {
+//             // Ensure goal.id is valid
+//             if (!goal.id) {
+//               throw new Error("Goal ID is missing");
+//             }
+
+//             // Update the goal in the database
+//             return db.spendingGoal.update({
+//               where: { id: goal.id },
+//               data: {
+//                 title: goal.title,
+//                 spendingGoal: goal.spendingGoal,
+//                 announcement: goal.announcement,
+//                 selectedTab: goal.selectedTab,
+//                 freeShipping: goal.freeShipping,
+//                 percentageDiscount: goal.percentageDiscount,
+//                 fixedAmountDiscount: goal.fixedAmountDiscount,
+//               }
+//             });
+//           }));
+
+//           // Return the results of all updates
+//           return json({ success: true, data: results });
+//         } catch (error) {
+//           console.error("Error saving goals:", error);
+//           return json({ success: false, error: 'Failed to save goals: ' + error.message }, { status: 500 });
+//         }
+
+//       default:
+//         return json({ success: false, error: 'Invalid action' }, { status: 400 });
+//     }
+//   } catch (error) {
+//     console.error("Error managing spending goals:", error);
+//     return json(
+//       {
+//         success: false,
+//         error: "Failed to process spending goal operation",
+//       },
+//       { status: 500 },
+//     );
+//   }
+// }
 
 
 

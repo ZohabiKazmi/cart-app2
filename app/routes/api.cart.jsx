@@ -36,6 +36,15 @@ async function handleCreate(formData, SpendingGoal) {
       DiscountId: formData.get("DiscountId") || null,
     };
 
+    // Debugging log to check newGoalData
+    console.log("New Goal Data:", newGoalData);
+
+    // Validate required fields
+    if (!newGoalData.shop || !newGoalData.spendingGoal) {
+      throw new Error("Shop and spending goal are required.");
+    }
+
+    // Create Shopify discount
     const title = formatDiscountTitle(
       newGoalData.spendingGoal,
       newGoalData.selectedTab,
@@ -43,10 +52,8 @@ async function handleCreate(formData, SpendingGoal) {
       newGoalData.fixedAmountDiscount
     );
 
-    // Create Shopify discount
     const discountResponse = await createAutomaticDiscount(SpendingGoal, {
       title,
-      id: newGoalData.DiscountId,
       spendingGoal: newGoalData.spendingGoal,
       discountType: newGoalData.selectedTab,
       discountValue:
@@ -57,20 +64,25 @@ async function handleCreate(formData, SpendingGoal) {
           : null,
     });
 
+    // Debugging log for discountResponse
+    console.log("Discount Response:", discountResponse);
+
     if (discountResponse.userErrors?.length) {
       throw new Error(discountResponse.userErrors[0].message);
     }
 
     // Store the Shopify discount ID
-    return db.spendingGoal.create({
+    const newGoal = await db.spendingGoal.create({
       data: {
         ...newGoalData,
         DiscountId: discountResponse.automaticDiscountNode.id,
       },
     });
+
+    return json({ success: true, data: newGoal });
   } catch (error) {
     console.error("Error creating goal:", error);
-    throw new Error(error.message || "Failed to create goal");
+    return json({ success: false, error: error.message || "Failed to create goal" }, { status: 500 });
   }
 }
 
@@ -175,11 +187,77 @@ export async function action({ request }) {
   const actionType = formData.get("_action");
   const SpendingGoal = await authenticate.admin(request);
 
+  console.log("Received action type:", actionType); // Debugging log
+  console.log("Form data keys:", Array.from(formData.keys())); // Log all keys in formData
+
   try {
     switch (actionType) {
-      case "CREATE":
-        const newGoal = await handleCreate(formData, SpendingGoal);
-        return json({ success: true, data: newGoal });
+      case "CREATE": {
+        try {
+          const newGoalData = {
+            shop: formData.get("shop") || "",
+            spendingGoal: parseFloat(formData.get("spendingGoal") || "0"),
+            announcement: formData.get("announcement") || "",
+            selectedTab: parseInt(formData.get("selectedTab") || "0"),
+            freeShipping: formData.get("freeShipping") === "true",
+            percentageDiscount: formData.get("percentageDiscount")
+              ? parseFloat(formData.get("percentageDiscount"))
+              : null,
+            fixedAmountDiscount: formData.get("fixedAmountDiscount")
+              ? parseFloat(formData.get("fixedAmountDiscount"))
+              : null,
+            DiscountId: formData.get("DiscountId") || null,
+          };
+
+          // Debugging log to check newGoalData
+          console.log("New Goal Data:", newGoalData);
+
+          // Validate required fields
+          if (!newGoalData.shop || !newGoalData.spendingGoal) {
+            throw new Error("Shop and spending goal are required.");
+          }
+
+          // Create Shopify discount
+          const title = formatDiscountTitle(
+            newGoalData.spendingGoal,
+            newGoalData.selectedTab,
+            newGoalData.percentageDiscount,
+            newGoalData.fixedAmountDiscount
+          );
+
+          const discountResponse = await createAutomaticDiscount(SpendingGoal, {
+            title,
+            spendingGoal: newGoalData.spendingGoal,
+            discountType: newGoalData.selectedTab,
+            discountValue:
+              newGoalData.selectedTab === 1
+                ? newGoalData.percentageDiscount
+                : newGoalData.selectedTab === 2
+                ? newGoalData.fixedAmountDiscount
+                : null,
+          });
+
+          // Debugging log for discountResponse
+          console.log("Discount Response:", discountResponse);
+
+          if (discountResponse.userErrors?.length) {
+            throw new Error(discountResponse.userErrors[0].message);
+          }
+
+          // Store the Shopify discount ID
+          const newGoal = await db.spendingGoal.create({
+            data: {
+              ...newGoalData,
+              DiscountId: discountResponse.automaticDiscountNode.id,
+            },
+          });
+
+          return json({ success: true, data: newGoal });
+        } catch (error) {
+          console.error("Error creating goal:", error);
+          return json({ success: false, error: error.message || "Failed to create goal" }, { status: 500 });
+        }
+      }
 
       case "UPDATE":
         const updatedGoal = await handleUpdate(formData, SpendingGoal);
@@ -188,6 +266,44 @@ export async function action({ request }) {
       case "DELETE":
         const result = await handleDelete(formData, SpendingGoal);
         return json(result);
+
+        case "SAVE": {
+          try {
+            const goalsData = formData.getAll("goals[]");
+            const goals = goalsData.map(data => JSON.parse(data));
+  
+            // Debugging log to check the parsed goals
+            console.log("Parsed goals data:", goals);
+  
+            const results = await Promise.all(goals.map(async (goal) => {
+              // Ensure goal.id is valid
+              if (!goal.id) {
+                throw new Error("Goal ID is missing");
+              }
+  
+              // Update the goal in the database
+              return db.spendingGoal.update({
+                where: { id: goal.id },
+                data: {
+                  title: goal.title,
+                  spendingGoal: goal.spendingGoal,
+                  announcement: goal.announcement,
+                  selectedTab: goal.selectedTab,
+                  freeShipping: goal.freeShipping,
+                  percentageDiscount: goal.percentageDiscount,
+                  fixedAmountDiscount: goal.fixedAmountDiscount,
+                }
+              });
+            }));
+  
+            // Return the results of all updates
+            return json({ success: true, data: results });
+          } catch (error) {
+            console.error("Error saving goals:", error);
+            return json({ success: false, error: 'Failed to save goals: ' + error.message }, { status: 500 });
+          }
+        }
+  
 
       default:
         return json({ success: false, error: "Invalid action type" }, { status: 400 });

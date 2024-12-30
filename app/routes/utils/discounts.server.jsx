@@ -1,30 +1,42 @@
 import { authenticate } from "../../shopify.server";
+import { db } from "../../db.server";
 
-export async function createAutomaticDiscount(session, { title, spendingGoal, discountType, discountValue }) {
-  const client = await authenticate.admin(session); // Ensure authentication here.
+export async function createAutomaticDiscount(SpendingGoal, { title, id, spendingGoal: goalAmount, discountType, discountValue }) {
+  const client = await authenticate.admin(SpendingGoal); 
+
+  const discountSettings = await db.discountSettings.findUnique({
+    where: { id: DiscountId },  
+  });
+
+  // Destructure the values from the fetched settings
+  const {
+    spendingGoal: fetchedSpendingGoal,
+    discountType: fetchedDiscountType, // Rename to avoid conflict
+    percentageDiscount,
+    fixedAmountDiscount,
+    freeShipping,
+  } = discountSettings;
 
   const discountConfig = {
-    title: title,
-    customerSelection: {
-      all: true,
-    },
+    title: title || `Discount for spending over ${goalAmount}`, // Use goalAmount instead of spendingGoal
+    startsAt: new Date().toISOString(),
+    endsAt: new Date(new Date().setFullYear(new Date().getFullYear() + 1)).toISOString(),
     minimumRequirement: {
       subtotal: {
-        greaterThanOrEqualToAmount: spendingGoal.toString(),
+        greaterThanOrEqualToSubtotal: goalAmount, // Use goalAmount instead of spendingGoal
       },
     },
-    startsAt: new Date().toISOString(),
-    customerGets: discountType === 0
+    customerGets: fetchedDiscountType === 0
       ? {
           shipping: {
             discount: {
-              onShipping: true,
+              onShipping: freeShipping, // Use the fetched value
             },
           },
         }
       : {
           value: {
-            [discountType === 1 ? "percentage" : "fixedAmount"]: discountValue.toString(),
+            [fetchedDiscountType === 1 ? "percentage" : "fixedAmount"]: fetchedDiscountType === 1 ? percentageDiscount : fixedAmountDiscount,
           },
         },
   };
@@ -32,14 +44,45 @@ export async function createAutomaticDiscount(session, { title, spendingGoal, di
   try {
     const response = await client.query({
       data: {
-        query: `
+        query: `#graphql
           mutation discountAutomaticBasicCreate($automaticBasicDiscount: DiscountAutomaticBasicInput!) {
             discountAutomaticBasicCreate(automaticBasicDiscount: $automaticBasicDiscount) {
               automaticDiscountNode {
                 id
+                automaticDiscount {
+                  ... on DiscountAutomaticBasic {
+                    startsAt
+                    endsAt
+                    minimumRequirement {
+                      ... on DiscountMinimumSubtotal {
+                        greaterThanOrEqualToSubtotal {
+                          amount
+                          currencyCode
+                        }
+                      }
+                    }
+                    customerGets {
+                      value {
+                        ... on DiscountAmount {
+                          amount {
+                            amount
+                            currencyCode
+                          }
+                          appliesOnEachItem
+                        }
+                      }
+                      items {
+                        ... on AllDiscountItems {
+                          allItems
+                        }
+                      }
+                    }
+                  }
+                }
               }
               userErrors {
                 field
+                code
                 message
               }
             }
@@ -52,6 +95,7 @@ export async function createAutomaticDiscount(session, { title, spendingGoal, di
     });
 
     const result = response.body.data.discountAutomaticBasicCreate;
+    console.log('result', result)
 
     if (result.userErrors?.length) {
       throw new Error(result.userErrors[0].message);
@@ -64,8 +108,8 @@ export async function createAutomaticDiscount(session, { title, spendingGoal, di
   }
 }
 
-export async function updateAutomaticDiscount(session, { discountId, title, spendingGoal, discountType, discountValue }) {
-  const client = await authenticate.admin(session);
+export async function updateAutomaticDiscount(SpendingGoal, { discountId, title, spendingGoal, discountType, discountValue }) {
+  const client = await authenticate.admin(SpendingGoal);
 
   const discountConfig = {
     title: title,
@@ -122,8 +166,8 @@ export async function updateAutomaticDiscount(session, { discountId, title, spen
   }
 }
 
-export async function deleteAutomaticDiscount(session, discountId) {
-  const client = await authenticate.admin(session);
+export async function deleteAutomaticDiscount(SpendingGoal, discountId) {
+  const client = await authenticate.admin(SpendingGoal);
 
   try {
     const response = await client.query({

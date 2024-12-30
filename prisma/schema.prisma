@@ -42,7 +42,7 @@ model SpendingGoal {
   freeShipping       Boolean?
   percentageDiscount Float?
   fixedAmountDiscount Float?
-  shopifyDiscountId  String? 
+  DiscountId         Int?
 }
 
 

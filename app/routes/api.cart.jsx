@@ -19,7 +19,7 @@ function formatDiscountTitle(spendingGoal, selectedTab, percentageDiscount, fixe
 }
 
 // Handler: Create a new goal
-async function handleCreate(formData, session) {
+async function handleCreate(formData, SpendingGoal) {
   try {
     const newGoalData = {
       shop: formData.get("shop") || "",
@@ -33,6 +33,7 @@ async function handleCreate(formData, session) {
       fixedAmountDiscount: formData.get("fixedAmountDiscount")
         ? parseFloat(formData.get("fixedAmountDiscount"))
         : null,
+      DiscountId: formData.get("DiscountId") || null,
     };
 
     const title = formatDiscountTitle(
@@ -43,8 +44,9 @@ async function handleCreate(formData, session) {
     );
 
     // Create Shopify discount
-    const discountResponse = await createAutomaticDiscount(session, {
+    const discountResponse = await createAutomaticDiscount(SpendingGoal, {
       title,
+      id: newGoalData.DiscountId,
       spendingGoal: newGoalData.spendingGoal,
       discountType: newGoalData.selectedTab,
       discountValue:
@@ -63,7 +65,7 @@ async function handleCreate(formData, session) {
     return db.spendingGoal.create({
       data: {
         ...newGoalData,
-        shopifyDiscountId: discountResponse.automaticDiscountNode.id,
+        DiscountId: discountResponse.automaticDiscountNode.id,
       },
     });
   } catch (error) {
@@ -73,7 +75,7 @@ async function handleCreate(formData, session) {
 }
 
 // Handler: Update an existing goal
-async function handleUpdate(formData, session) {
+async function handleUpdate(formData, SpendingGoal) {
   try {
     const goalId = parseInt(formData.get("goalId"));
     const goal = await db.spendingGoal.findUnique({ where: { id: goalId } });
@@ -95,6 +97,7 @@ async function handleUpdate(formData, session) {
         ? parseFloat(formData.get("fixedAmountDiscount"))
         : null,
     };
+    console.log("updated data----->",updatedData);
 
     const title = formatDiscountTitle(
       updatedData.spendingGoal,
@@ -104,9 +107,9 @@ async function handleUpdate(formData, session) {
     );
 
     // Update Shopify discount
-    if (goal.shopifyDiscountId) {
-      await updateAutomaticDiscount(session, {
-        discountId: goal.shopifyDiscountId,
+    if (goal.DiscountId) {
+      await updateAutomaticDiscount(SpendingGoal, {
+        discountId: goal.DiscountId,
         title,
         spendingGoal: updatedData.spendingGoal,
         discountType: updatedData.selectedTab,
@@ -130,7 +133,7 @@ async function handleUpdate(formData, session) {
 }
 
 // Handler: Delete an existing goal
-async function handleDelete(formData, session) {
+async function handleDelete(formData, SpendingGoal) {
   try {
     const goalId = parseInt(formData.get("goalId"));
     const goalToDelete = await db.spendingGoal.findUnique({ where: { id: goalId } });
@@ -140,8 +143,8 @@ async function handleDelete(formData, session) {
     }
 
     // Delete Shopify discount
-    if (goalToDelete.shopifyDiscountId) {
-      await deleteAutomaticDiscount(session, goalToDelete.shopifyDiscountId);
+    if (goalToDelete.DiscountId) {
+      await deleteAutomaticDiscount(SpendingGoal, goalToDelete.DiscountId);
     }
 
     await db.spendingGoal.delete({
@@ -170,20 +173,20 @@ export async function loader({ request }) {
 export async function action({ request }) {
   const formData = await request.formData();
   const actionType = formData.get("_action");
-  const session = await authenticate.admin(request);
+  const SpendingGoal = await authenticate.admin(request);
 
   try {
     switch (actionType) {
       case "CREATE":
-        const newGoal = await handleCreate(formData, session);
+        const newGoal = await handleCreate(formData, SpendingGoal);
         return json({ success: true, data: newGoal });
 
       case "UPDATE":
-        const updatedGoal = await handleUpdate(formData, session);
+        const updatedGoal = await handleUpdate(formData, SpendingGoal);
         return json({ success: true, data: updatedGoal });
 
       case "DELETE":
-        const result = await handleDelete(formData, session);
+        const result = await handleDelete(formData, SpendingGoal);
         return json(result);
 
       default:
@@ -197,7 +200,6 @@ export async function action({ request }) {
     );
   }
 }
-
 
 
 
@@ -745,3 +747,4 @@ export async function action({ request }) {
 //     );
 //   }
 // }
+

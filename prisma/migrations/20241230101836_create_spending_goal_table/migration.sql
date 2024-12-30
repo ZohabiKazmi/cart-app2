@@ -9,5 +9,5 @@ CREATE TABLE "SpendingGoal" (
     "freeShipping" BOOLEAN,
     "percentageDiscount" REAL,
     "fixedAmountDiscount" REAL,
-    "shopifyDiscountId" TEXT
+    "DiscountId" INTEGER
 );

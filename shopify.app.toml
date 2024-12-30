@@ -1,7 +1,7 @@
 # Learn more about configuring your app at https://shopify.dev/docs/apps/tools/cli/configuration
 
 client_id = "3f130a89219b009840b1604715f5294e"
-application_url = "https://note-enormous-latinas-disks.trycloudflare.com"
+application_url = "https://cn-original-cached-literally.trycloudflare.com"
 embedded = true
 name = "app"
 handle = "app-1521"
@@ -19,9 +19,9 @@ scopes = "write_products, write_discounts"
 
 [auth]
 redirect_urls = [
-  "https://note-enormous-latinas-disks.trycloudflare.com/auth/callback",
-  "https://note-enormous-latinas-disks.trycloudflare.com/auth/shopify/callback",
-  "https://note-enormous-latinas-disks.trycloudflare.com/api/auth/callback"
+  "https://cn-original-cached-literally.trycloudflare.com/auth/callback",
+  "https://cn-original-cached-literally.trycloudflare.com/auth/shopify/callback",
+  "https://cn-original-cached-literally.trycloudflare.com/api/auth/callback"
 ]
 
 [pos]

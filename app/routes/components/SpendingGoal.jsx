@@ -29,6 +29,7 @@ export function SpendingGoal({
   freeShipping: initialFreeShipping,
   percentageDiscount: initialPercentageDiscount,
   fixedAmountDiscount: initialFixedAmountDiscount,
+  discountId,
   onDelete,
   onUpdate,
 }) {
@@ -41,6 +42,7 @@ export function SpendingGoal({
     freeShipping: initialFreeShipping || false,
     percentageDiscount: initialPercentageDiscount || 0,
     fixedAmountDiscount: initialFixedAmountDiscount || 0,
+    discountId: discountId || null,
   });
 
   // Cache previous state to prevent unnecessary updates
@@ -62,8 +64,6 @@ export function SpendingGoal({
   );
 
   // Handle discount type changes
-  const [errorMessage, setErrorMessage] = useState("");
-
   const handleTabChange = useCallback(
     (value) => {
       const newTab = parseInt(value);
@@ -86,16 +86,16 @@ export function SpendingGoal({
     switch (state.selectedTab) {
       case DISCOUNT_TYPES.PERCENTAGE:
         return (
-            <TextField
-              label="Percentage Discount"
-              type="number"
-              value={state.percentageDiscount.toString()}
-              onChange={(value) =>
-                handleUpdate({ percentageDiscount: parseFloat(value) || 0 })
-              }
-              autoComplete="off"
-              suffix="%"
-            />
+          <TextField
+            label="Percentage Discount"
+            type="number"
+            value={state.percentageDiscount.toString()}
+            onChange={(value) =>
+              handleUpdate({ percentageDiscount: parseFloat(value) || 0 })
+            }
+            autoComplete="off"
+            suffix="%"
+          />
         );
       case DISCOUNT_TYPES.FIXED_AMOUNT:
         return (
@@ -137,8 +137,6 @@ export function SpendingGoal({
           onChange={handleTabChange}
           value={state.selectedTab.toString()}
         />
-        {errorMessage && <div style={{ color: "red" }}>{errorMessage}</div>}{" "}
-        {/* Error message */}
         {/* Spending Goal Input */}
         <TextField
           label="Spending Goal"
@@ -168,7 +166,6 @@ export function SpendingGoal({
     </Card>
   );
 }
-
 // <script>
 // const calculateFinalCartTotal = (cartTotal, deliveryCharges) => {
 //     let finalTotal = cartTotal;
@@ -206,3 +203,4 @@ export function SpendingGoal({
 //     window.location.href = checkoutUrl;
 //   };
 // </script>
+

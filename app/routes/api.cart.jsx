@@ -195,9 +195,9 @@ export async function action({ request }) {
       case "CREATE": {
         try {
           const newGoalData = {
-            shop: formData.get("shop") || "",
-            spendingGoal: parseFloat(formData.get("spendingGoal") || "0"),
-            announcement: formData.get("announcement") || "",
+            shop: formData.get("shop") || "zohaibalishah.myshopify.com",
+            spendingGoal: parseFloat(formData.get("spendingGoal") || "50"),
+            announcement: formData.get("announcement") || "Add {{amount_left}} to avail discount!",
             selectedTab: parseInt(formData.get("selectedTab") || "0"),
             freeShipping: formData.get("freeShipping") === "true",
             percentageDiscount: formData.get("percentageDiscount")

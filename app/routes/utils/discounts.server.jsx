@@ -4,8 +4,11 @@ import { db } from "../../db.server";
 export async function createAutomaticDiscount(SpendingGoal, { title, id, spendingGoal: goalAmount, discountType, discountValue }) {
   const client = await authenticate.admin(SpendingGoal); 
 
+  // Log the input parameters
+  console.log("Creating automatic discount with parameters:", { title, id, goalAmount, discountType, discountValue });
+
   const discountSettings = await db.discountSettings.findUnique({
-    where: { id: DiscountId },  
+    where: { id },
   });
 
   // Destructure the values from the fetched settings
@@ -94,10 +97,12 @@ export async function createAutomaticDiscount(SpendingGoal, { title, id, spendin
       },
     });
 
-    const result = response.body.data.discountAutomaticBasicCreate;
-    console.log('result', result)
+    // Log the response for debugging
+    console.log('Response from Shopify:', response);
 
+    const result = response.body.data.discountAutomaticBasicCreate;
     if (result.userErrors?.length) {
+      console.error("User errors from Shopify:", result.userErrors);
       throw new Error(result.userErrors[0].message);
     }
 

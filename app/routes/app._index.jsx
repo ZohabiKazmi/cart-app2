@@ -211,190 +211,337 @@
 
 
 
-import { useState, useEffect } from "react";
+// 2.0
+
+
+// import { useState, useEffect } from "react";
+// import { Frame, Page, Layout, Button, Toast, BlockStack } from "@shopify/polaris";
+// import { SpendingGoal } from "./components/SpendingGoal";
+
+// export default function Index() {
+//   const [spendingGoals, setSpendingGoals] = useState([]);
+//   const [isLoading, setIsLoading] = useState(false);
+//   const [toastActive, setToastActive] = useState(false);
+//   const [toastMessage, setToastMessage] = useState("");
+//   const [toastError, setToastError] = useState(false);
+
+//   // Fetch goals from backend
+//   useEffect(() => {
+//     async function fetchGoals() {
+//       try {
+//         const response = await fetch("/api/cart");
+//         if (response.ok) {
+//           const result = await response.json();
+//           if (result.success && Array.isArray(result.data)) {
+//             setSpendingGoals(result.data);
+//           } else {
+//             setSpendingGoals([]);
+//           }
+//         } else {
+//           console.error(`Error fetching goals: ${response.statusText}`);
+//           setSpendingGoals([]);
+//         }
+//       } catch (error) {
+//         console.error(`Fetch goals failed: ${error.message}`);
+//         setSpendingGoals([]);
+//       }
+//     }
+//     fetchGoals();
+//   }, []);
+
+//   // Handle adding a spending goal
+//   const handleAddSpendingGoal = async () => {
+//     const formData = new FormData();
+//     formData.append("_action", "CREATE_DISCOUNT");
+//     formData.append("shop", "zohaibalishah.myshopify.com");
+//     formData.append("spendingGoal", "50");
+//     formData.append("announcement", "Add {{amount_left}} to get discounts");
+//     formData.append("selectedTab", "0");
+//     formData.append("percentageDiscount", "10");
+//     formData.append("fixedAmountDiscount", "5");
+//     formData.append("freeShipping", "false");
+
+//     try {
+//       const response = await fetch("/api/cart", {
+//         method: "POST",
+//         body: formData,
+//       });
+
+//       if (response.ok) {
+//         const { data } = await response.json();
+//         setSpendingGoals((prevGoals) => [...prevGoals, data]);
+//         setToastMessage("Discount created successfully");
+//         setToastError(false);
+//       } else {
+//         const errorText = await response.text();
+//         console.error("Error response:", errorText);
+//         throw new Error("Failed to create discount");
+//       }
+//     } catch (error) {
+//       setToastMessage(error.message || "Failed to create discount");
+//       setToastError(true);
+//     } finally {
+//       setToastActive(true);
+//     }
+//   };
+
+//   // Handle deleting a spending goal
+//   const handleDeleteSpendingGoal = async (id) => {
+//     const formData = new FormData();
+//     formData.append("_action", "DELETE");
+//     formData.append("goalId", id.toString());
+
+//     try {
+//       const response = await fetch("/api/cart", {
+//         method: "POST",
+//         body: formData,
+//       });
+
+//       if (response.ok) {
+//         const { success, error } = await response.json();
+//         if (success) {
+//           setSpendingGoals((prevGoals) => prevGoals.filter((goal) => goal.id !== id));
+//           setToastMessage("Goal deleted successfully");
+//           setToastError(false);
+//         } else {
+//           throw new Error(error || "Failed to delete goal");
+//         }
+//       } else {
+//         throw new Error(await response.text());
+//       }
+//     } catch (error) {
+//       console.error("Delete goal failed:", error);
+//       setToastMessage(error.message || "Failed to delete goal");
+//       setToastError(true);
+//     } finally {
+//       setToastActive(true);
+//     }
+//   };
+
+//   // Handle saving changes to goals
+//   const handleSaveChanges = async () => {
+//     const formData = new FormData();
+//     formData.append("_action", "SAVE");
+
+//     // Ensure spendingGoals is an array before processing
+//     if (!Array.isArray(spendingGoals)) {
+//       console.error("spendingGoals is not an array:", spendingGoals);
+//       setToastMessage("Failed to save changes: spendingGoals is not an array.");
+//       setToastError(true);
+//       setToastActive(true);
+//       return;
+//     }
+
+//     spendingGoals.forEach(goal => {
+//       formData.append("goals[]", JSON.stringify({
+//         id: goal.id,
+//         shop: goal.shop,
+//         title: goal.title,
+//         spendingGoal: goal.spendingGoal,
+//         announcement: goal.announcement,
+//         selectedTab: goal.selectedTab,
+//         freeShipping: goal.freeShipping,
+//         percentageDiscount: goal.percentageDiscount,
+//         fixedAmountDiscount: goal.fixedAmountDiscount,
+//       }));
+//     });
+
+//     try {
+//       const response = await fetch("/api/cart", {
+//         method: "POST",
+//         body: formData,
+//       });
+
+//       if (response.ok) {
+//         const result = await response.json();
+//         if (result.success) {
+//           setToastMessage("Changes saved successfully");
+//           setToastError(false);
+//         } else {
+//           throw new Error(result.error || "Failed to save changes");
+//         }
+//       } else {
+//         throw new Error(await response.text());
+//       }
+//     } catch (error) {
+//       console.error("Save changes failed:", error);
+//       setToastMessage(error.message || "Failed to save changes");
+//       setToastError(true);
+//     } finally {
+//       setToastActive(true);
+//     }
+//   };
+
+//   const toastMarkup = toastActive && (
+//     <Toast
+//       content={toastMessage}
+//       error={toastError}
+//       onDismiss={() => setToastActive(false)}
+//     />
+//   );
+
+//   const handleGoalUpdate = (goalId, updates) => {
+//     setSpendingGoals((prevGoals) =>
+//       prevGoals.map((goal) =>
+//         goal.id === goalId ? { ...goal, ...updates } : goal
+//       )
+//     );
+//   };
+
+//   return (
+//     <Frame>
+//       <Page
+//         title="Cart App"
+//         primaryAction={{
+//           content: isLoading ? "Saving..." : "Save Changes",
+//           onAction: handleSaveChanges,
+//           loading: isLoading,
+//           primary: true,
+//           disabled: isLoading,
+//         }}
+//       >
+//         <BlockStack gap="500">
+//           <Layout>
+//             <Layout.Section>
+//               {spendingGoals.map((goal) => (
+//                 <SpendingGoal
+//                   key={goal.id}
+//                   {...goal}
+//                   onUpdate={(updates) => handleGoalUpdate(goal.id, updates)}
+//                   onDelete={handleDeleteSpendingGoal}
+//                 />
+//               ))}
+//               <Button
+//                 variant="primary"
+//                 fullWidth
+//                 onClick={handleAddSpendingGoal}
+//                 disabled={isLoading}
+//               >
+//                 Add New Discount
+//               </Button>
+//             </Layout.Section>
+//           </Layout>
+//         </BlockStack>
+//         {toastMarkup}
+//       </Page>
+//     </Frame>
+//   );
+// }
+
+
+
+
+
+// 3.0
+
+import { useState, useCallback } from "react";
 import { Frame, Page, Layout, Button, Toast, BlockStack } from "@shopify/polaris";
 import { SpendingGoal } from "./components/SpendingGoal";
+import { useSubmit, useLoaderData } from "@remix-run/react";
+import { json } from "@remix-run/node";
+import db from "../db.server";
+import { handleCreateDiscount, handleUpdateDiscount, handleDeleteDiscount } from "./utils/discount-handlers.server";
 
-export default function Index() {
-  const [spendingGoals, setSpendingGoals] = useState([]);
-  const [isLoading, setIsLoading] = useState(false);
-  const [toastActive, setToastActive] = useState(false);
-  const [toastMessage, setToastMessage] = useState("");
-  const [toastError, setToastError] = useState(false);
-  const [nextId, setNextId] = useState(101);
+// Loader function to fetch spending goals
+export async function loader() {
+  try {
+    const goals = await db.spendingGoal.findMany();
+    return json({ success: true, data: goals });
+  } catch (error) {
+    console.error("Loader Error:", error);
+    return json({ success: false, error: error.message }, { status: 400 });
+  }
+}
 
-  // Fetch goals from backend
-  useEffect(() => {
-    async function fetchGoals() {
-      try {
-        const response = await fetch("/api/cart");
-        if (response.ok) {
-          const result = await response.json();
-          if (result.success && Array.isArray(result.data)) {
-            setSpendingGoals(result.data);
-          } else {
-            setSpendingGoals([]);
-          }
-        } else {
-          console.error(`Error fetching goals: ${response.statusText}`);
-          setSpendingGoals([]);
-        }
-      } catch (error) {
-        console.error(`Fetch goals failed: ${error.message}`);
-        setSpendingGoals([]);
-      }
+// Action function to handle form submissions
+export async function action({ request }) {
+  const formData = await request.formData();
+  const actionType = formData.get("_action");
+
+  try {
+    switch (actionType) {
+      case "CREATE_DISCOUNT":
+        return await handleCreateDiscount(request, formData);
+      case "UPDATE":
+        return await handleUpdateDiscount(request, formData);
+      case "DELETE":
+        return await handleDeleteDiscount(request, formData);
+      default:
+        throw new Error("Invalid action type");
     }
-    fetchGoals();
+  } catch (error) {
+    console.error("Action Error:", error);
+    return json({ success: false, error: error.message }, { status: 400 });
+  }
+}
+
+// Component
+export default function Index() {
+  const submit = useSubmit();
+  const { data: spendingGoals = [] } = useLoaderData();
+  const [isLoading, setIsLoading] = useState(false);
+  const [toast, setToast] = useState({ active: false, content: "", error: false });
+
+  const showToast = useCallback((content, error = false) => {
+    setToast({ active: true, content, error });
   }, []);
 
-  // Handle adding a spending goal
   const handleAddSpendingGoal = async () => {
+    setIsLoading(true);
     const formData = new FormData();
-    formData.append("_action", "CREATE");
-    formData.append("shop", "zohaibalishah.myshopify.com");
-    formData.append("title", "Discount Title");
+    formData.append("_action", "CREATE_DISCOUNT");
+    formData.append("title", "New Discount");
     formData.append("spendingGoal", "50");
     formData.append("announcement", "Add {{amount_left}} to get discounts");
     formData.append("selectedTab", "0");
-    formData.append("DiscountId", nextId);
+    formData.append("freeShipping", "true");
 
     try {
-      const response = await fetch("/api/cart", {
-        method: "POST",
-        body: formData,
-      });
-
-      if (response.ok) {
-        const { data } = await response.json();
-        setSpendingGoals((prevGoals) => [...prevGoals, data]);
-        setToastMessage("Goal created successfully");
-        setToastError(false);
-      } else {
-        const errorText = await response.text();
-        console.error("Error response:", errorText);
-        throw new Error("Failed to create goal");
-      }
+      await submit(formData, { method: "post" });
+      showToast("Discount created successfully");
     } catch (error) {
-      setToastMessage(error.message || "Failed to create goal");
-      setToastError(true);
+      showToast(error.message || "Failed to create discount", true);
     } finally {
-      setToastActive(true);
+      setIsLoading(false);
     }
-    setNextId((prevId) => prevId + 1);
   };
 
-  // Handle deleting a spending goal
-  const handleDeleteSpendingGoal = async (id) => {
+  const handleGoalUpdate = useCallback((goalId, updates) => {
+    const formData = new FormData();
+    formData.append("_action", "UPDATE");
+    formData.append("goalId", goalId.toString());
+    Object.entries(updates).forEach(([key, value]) => {
+      formData.append(key, value.toString());
+    });
+
+    try {
+      submit(formData, { method: "post" });
+    } catch (error) {
+      showToast(error.message || "Failed to update discount", true);
+    }
+  }, [submit, showToast]);
+
+  const handleDeleteSpendingGoal = useCallback(async (id) => {
     const formData = new FormData();
     formData.append("_action", "DELETE");
     formData.append("goalId", id.toString());
 
     try {
-      const response = await fetch("/api/cart", {
-        method: "POST",
-        body: formData,
-      });
-
-      if (response.ok) {
-        const { success, error } = await response.json();
-        if (success) {
-          setSpendingGoals((prevGoals) => prevGoals.filter((goal) => goal.id !== id));
-          setToastMessage("Goal deleted successfully");
-          setToastError(false);
-        } else {
-          throw new Error(error || "Failed to delete goal");
-        }
-      } else {
-        throw new Error(await response.text());
-      }
+      await submit(formData, { method: "post" });
+      showToast("Discount deleted successfully");
     } catch (error) {
-      console.error("Delete goal failed:", error);
-      setToastMessage(error.message || "Failed to delete goal");
-      setToastError(true);
-    } finally {
-      setToastActive(true);
+      showToast(error.message || "Failed to delete discount", true);
     }
-  };
-
-  // Handle saving changes to goals
-  const handleSaveChanges = async () => {
-    const formData = new FormData();
-    formData.append("_action", "SAVE");
-
-    // Ensure spendingGoals is an array before processing
-    if (!Array.isArray(spendingGoals)) {
-      console.error("spendingGoals is not an array:", spendingGoals);
-      setToastMessage("Failed to save changes: spendingGoals is not an array.");
-      setToastError(true);
-      setToastActive(true);
-      return;
-    }
-
-    spendingGoals.forEach(goal => {
-      formData.append("goals[]", JSON.stringify({
-        id: goal.id,
-        shop: goal.shop,
-        title: goal.title,
-        spendingGoal: goal.spendingGoal,
-        announcement: goal.announcement,
-        selectedTab: goal.selectedTab,
-        freeShipping: goal.freeShipping,
-        percentageDiscount: goal.percentageDiscount,
-        fixedAmountDiscount: goal.fixedAmountDiscount,
-      }));
-    });
-
-    try {
-      const response = await fetch("/api/cart", {
-        method: "POST",
-        body: formData,
-      });
-
-      if (response.ok) {
-        const result = await response.json();
-        if (result.success) {
-          setToastMessage("Changes saved successfully");
-          setToastError(false);
-        } else {
-          throw new Error(result.error || "Failed to save changes");
-        }
-      } else {
-        throw new Error(await response.text());
-      }
-    } catch (error) {
-      console.error("Save changes failed:", error);
-      setToastMessage(error.message || "Failed to save changes");
-      setToastError(true);
-    } finally {
-      setToastActive(true);
-    }
-  };
-
-  const toastMarkup = toastActive && (
-    <Toast
-      content={toastMessage}
-      error={toastError}
-      onDismiss={() => setToastActive(false)}
-    />
-  );
-
-  const handleGoalUpdate = (goalId, updates) => {
-    setSpendingGoals((prevGoals) =>
-      prevGoals.map((goal) =>
-        goal.id === goalId ? { ...goal, ...updates } : goal
-      )
-    );
-  };
+  }, [submit, showToast]);
 
   return (
     <Frame>
       <Page
-        title="Cart App"
+        title="Spending Goals"
         primaryAction={{
-          content: isLoading ? "Saving..." : "Save Changes",
-          onAction: handleSaveChanges,
+          content: "Save Changes",
+          onAction: () => showToast("All changes saved"),
           loading: isLoading,
-          primary: true,
           disabled: isLoading,
         }}
       >
@@ -405,7 +552,7 @@ export default function Index() {
                 <SpendingGoal
                   key={goal.id}
                   {...goal}
-                  onUpdate={(updates) => handleGoalUpdate(goal.id, updates)}
+                  onUpdate={handleGoalUpdate}
                   onDelete={handleDeleteSpendingGoal}
                 />
               ))}
@@ -420,7 +567,14 @@ export default function Index() {
             </Layout.Section>
           </Layout>
         </BlockStack>
-        {toastMarkup}
+
+        {toast.active && (
+          <Toast
+            content={toast.content}
+            error={toast.error}
+            onDismiss={() => setToast({ ...toast, active: false })}
+          />
+        )}
       </Page>
     </Frame>
   );

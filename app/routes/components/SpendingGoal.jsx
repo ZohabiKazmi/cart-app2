@@ -73,7 +73,7 @@ export function SpendingGoal({
           newTab === DISCOUNT_TYPES.FREE_SHIPPING
             ? `Add {{amount_left}} more to get free shipping`
             : `Add {{amount_left}} more to get discount`,
-        freeShipping: newTab === DISCOUNT_TYPES.FREE_SHIPPING, // Set freeShipping based on selectedTab
+        freeShipping: newTab === DISCOUNT_TYPES.FREE_SHIPPING, 
       };
 
       handleUpdate(updates);

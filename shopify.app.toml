@@ -1,7 +1,7 @@
 # Learn more about configuring your app at https://shopify.dev/docs/apps/tools/cli/configuration
 
 client_id = "3f130a89219b009840b1604715f5294e"
-application_url = "https://corruption-funeral-roses-used.trycloudflare.com"
+application_url = "https://wherever-volunteers-distributed-screensavers.trycloudflare.com"
 embedded = true
 name = "app"
 handle = "app-1521"
@@ -19,9 +19,9 @@ scopes = "write_products, write_discounts"
 
 [auth]
 redirect_urls = [
-  "https://corruption-funeral-roses-used.trycloudflare.com/auth/callback",
-  "https://corruption-funeral-roses-used.trycloudflare.com/auth/shopify/callback",
-  "https://corruption-funeral-roses-used.trycloudflare.com/api/auth/callback"
+  "https://wherever-volunteers-distributed-screensavers.trycloudflare.com/auth/callback",
+  "https://wherever-volunteers-distributed-screensavers.trycloudflare.com/auth/shopify/callback",
+  "https://wherever-volunteers-distributed-screensavers.trycloudflare.com/api/auth/callback"
 ]
 
 [pos]

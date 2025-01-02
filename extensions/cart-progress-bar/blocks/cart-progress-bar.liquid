@@ -1,41 +1,44 @@
 <style>
-  <div class="shipping-remaining-container">
-  <style>
-    .shipping-remaining-container {
-      padding: 12px;
-      background: white;
-      margin: 10px 0;
-      border: 1px solid #e7e5e5;
-      border-radius: 8px;
-    }
-    .shipping-message {
-      text-align: center;
-      margin-bottom: 8px;
-      font-size: 14px;
-    }
-    .shipping-progress-bar {
-      height: 8px;
-      background: #eee;
-      border-radius: 4px;
-      margin: 8px 0;
-      overflow: hidden;
-    }
-    .progress-fill {
-      height: 100%;
-      background: #000;
-      transition: width 0.3s ease;
-    }
-    .benefits-container {
-      display: flex;
-      justify-content: space-between;
-      font-size: 12px;
-      color: #666;
-    }
+  .shipping-remaining-container {
+    padding: 12px;
+    background: {{ block.settings.card_background_color }};
+    margin: 10px 0;
+    border: 1px solid #e7e5e5;
+    border-radius: {{ block.settings.border_radius }}px;
+  }
+  .shipping-message {
+    text-align: center;
+    margin-bottom: 8px;
+    font-size: 14px;
+  }
+  .shipping-progress-bar {
+    height: 8px;
+    background: {{ block.settings.bar-bg }};
+    border-radius: {{ block.settings.border_radius }}px;
+    margin: 8px 0;
+    overflow: hidden;
+  }
+  .progress-fill {
+    height: 100%;
+    background: {{ block.settings.progress_color }};
+    transition: width 0.3s ease;
+  }
+  .benefits-container {
+    display: flex;
+    justify-content: space-between;
+    font-size: 12px;
+    color: {{ block.settings.text_color }};
+  }
+  .z-announcement{
+    color: {{ block.settings.text_color }};
+  }
   </style>
+  
 
-<div class="shipping-remaining-container" x-data="cartProgress">
+  
+<div id="cart-progress-bar" class="shipping-remaining-container" x-data="cartProgress">
   <div class="shipping-message" x-show="spendingGoals.length > 0">
-    <span x-text="getCurrentMessage()"></span>
+    <span class="z-announcement" x-text="getCurrentMessage()"></span>
   </div>
 
   <div class="shipping-progress-bar" x-show="spendingGoals.length > 0">
@@ -48,8 +51,8 @@
     <template x-for="goal in spendingGoals" :key="goal.spendingGoal">
       <span x-text="getBenefitText(goal)"></span>
     </template>
-  </div>
-</div>
+  
+
 
 <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
 
@@ -58,7 +61,7 @@
   Alpine.data('cartProgress', () => ({
     spendingGoals: [],
     cartTotal: 0, 
-    appUrl: "https://show-joshua-clubs-mens.trycloudflare.com",
+    appUrl: "https://wherever-volunteers-distributed-screensavers.trycloudflare.com",
 
     init() {
       this.fetchSpendingGoals();
@@ -69,13 +72,21 @@
         this.fetchCartTotal(); // Fetch updated cart total
         this.refreshValues(); // Recalculate progress and message
       });
+
+      setInterval(() => {
+        this.fetchCartTotal(); 
+      }, 1000); 
     },
 
     async fetchCartTotal() {
       try {
         const response = await fetch('/cart.js'); // Shopify's cart API
         const data = await response.json();
-        this.cartTotal = data.total_price; // Update cartTotal dynamically
+        // Check if the cart total has changed
+        if (this.cartTotal !== data.total_price) {
+          this.cartTotal = data.total_price; 
+          // console.log('Cart total updated:', this.cartTotal);
+        }
       } catch (error) {
         console.error('Error fetching cart total:', error);
       }
@@ -133,44 +144,38 @@
   {% schema %}
     {
       "name": "cart-progress-bar",
-      "target": "section",
+      "target": "cart",
       "settings": [
         {
-          "type": "range",
+          "type": "number",
           "id": "border_radius",
-          "label": "Border Radius",
-          "min": 0,
-          "max": 20,
-          "step": 1,
-          "default": 4,
-          "unit": "px"
-        },
-        {
-          "type": "range",
-          "id": "border_width",
-          "label": "Border Width",
-          "min": 0,
-          "max": 5,
-          "step": 1,
-          "default": 1,
-          "unit": "px"
-        },
-        {
-          "type": "range",
-          "id": "progress_height",
-          "label": "Progress Bar Height",
-          "min": 2,
-          "max": 20,
-          "step": 1,
-          "default": 8,
-          "unit": "px"
+          "label": "Card Border Radius",
+          "default": 8
         },
         {
           "type": "color",
           "id": "progress_color",
           "label": "Progress Bar Color",
           "default": "#000000"
-        }
+        },
+        {
+          "type": "color",
+          "id": "card_background_color",
+          "label": "Card Background Color",
+          "default": "#ffffff"
+        },
+        {
+          "type": "color",
+          "id": "text_color",
+          "label": "Text Color",
+          "default": "#666"
+        },        
+        {
+          "type": "color",
+          "id": "bar-bg",
+          "label": "Progress Bar Background Color",
+          "default": "#eee"
+        }        
       ]
     }
     {% endschema %}

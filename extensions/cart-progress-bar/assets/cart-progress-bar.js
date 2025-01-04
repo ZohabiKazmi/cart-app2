@@ -6,7 +6,7 @@ document.addEventListener("DOMContentLoaded", () => {
       cartDrawer.appendChild(progressBarContainer);
   
       // Fetch data and render the progress bar
-      fetch('/apps/your-app-endpoint')
+      fetch('/api/cart')
         .then(response => response.json())
         .then(data => {
           progressBarContainer.innerHTML = data.progressBarHtml;
